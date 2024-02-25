@@ -15,7 +15,7 @@ import CircleStyle from 'ol/style/Circle'
 import BingMaps from 'ol/source/BingMaps';
 import OSM from 'ol/source/OSM';
 import { HttpClient } from '@angular/common/http';
-
+import XYZ from 'ol/source/XYZ';
 
 @Component({
   selector: 'app-map',
@@ -30,6 +30,7 @@ export class MapComponent implements AfterViewInit {
   isMapFullScreen: boolean = false;
   selectedLayer: string = 'Bing';
   bingStyleMap: string = 'AerialWithLabelsOnDemand';
+  googleStyleMap: string = 'http://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}';
   mapZoon: number = 18;
   gpsData: any = [];
   trackingStatus: boolean = true;
@@ -56,6 +57,22 @@ export class MapComponent implements AfterViewInit {
       this.selectedLayer = event.currentTarget.value;
     } else if (event.currentTarget.id == "bingselect"){
       this.bingStyleMap = event.currentTarget.value;
+    } else if (event.currentTarget.id == "googleselect"){
+      let googleMapUrl = 'http://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}';
+      if (event.currentTarget.value == 'Roadmap'){
+        googleMapUrl = 'http://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}';
+      } else if (event.currentTarget.value == 'Terrain') {
+        googleMapUrl = 'http://mt0.google.com/vt/lyrs=p&hl=en&x={x}&y={y}&z={z}';
+      } else if (event.currentTarget.value == 'Altered roadmap') {
+        googleMapUrl = 'http://mt0.google.com/vt/lyrs=r&hl=en&x={x}&y={y}&z={z}';
+      } else if (event.currentTarget.value == 'Satellite only') {
+        googleMapUrl = 'http://mt0.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}';
+      } else if (event.currentTarget.value == 'Terrain only') {
+        googleMapUrl = 'http://mt0.google.com/vt/lyrs=t&hl=en&x={x}&y={y}&z={z}';
+      } else if (event.currentTarget.value == 'Hybrid') {
+        googleMapUrl = 'http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}';
+      }
+      this.googleStyleMap = googleMapUrl;
     }
 
     this.updateMapLayer();
@@ -78,9 +95,11 @@ export class MapComponent implements AfterViewInit {
   private initializeMap(): void {
     this.map.setTarget(this.mapElement.nativeElement);
     this.updateMapLayer();
+    
     const vectorLayer = new VectorLayer({
       source: new VectorSource(),
     });
+
     this.map.addLayer(vectorLayer);
 
     const viewr = new View({
@@ -177,7 +196,20 @@ export class MapComponent implements AfterViewInit {
 
   private updateMapLayer() {
     this.map.getLayers().clear(); // Clear existing layers
-    const layer = this.selectedLayer === 'Bing' ? this.createBingLayer() : this.createOSMLayer();
+    let layer: any = null;
+    if (this.selectedLayer === 'Bing'){
+      layer = this.createBingLayer();
+    } else if(this.selectedLayer == 'OSM') {
+      layer = this.createOSMLayer();
+    } else if (this.selectedLayer == 'Google'){
+      layer = new TileLayer({
+        source: new XYZ({
+          url: this.googleStyleMap
+        })
+      });
+    }
+
+    //const layer = this.selectedLayer === 'Bing' ? this.createBingLayer() : this.createOSMLayer();
     this.map.addLayer(layer); // Add selected layer to map
   }
 

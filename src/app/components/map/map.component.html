@@ -5,6 +5,7 @@
             <select (change)="mapSelect($event)" id="mapselect">
                 <option>Bing</option>
                 <option>OSM</option>
+                <option>Google</option>
             </select>
 
             <select *ngIf="selectedLayer == 'Bing'" 
@@ -16,6 +17,17 @@
                 <option>AerialWithLabelsOnDemand</option>
                 <option>CanvasDark</option>
                 <option>OrdnanceSurvey</option>
+            </select>
+
+            <select *ngIf="selectedLayer == 'Google'"
+                    (change)="mapSelect($event)" 
+                    id="googleselect">
+                <option>Roadmap</option>
+                <option>Terrain</option>
+                <option>Altered roadmap</option>
+                <option>Satellite only</option>
+                <option>Terrain only</option>
+                <option>Hybrid</option>
             </select>
 
 
