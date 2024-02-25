@@ -1,3 +1,3 @@
 export const parameters = {
-    "bingKey": "API-KEY"
+    "bingKey": "Ak58h4YF2UZVGY4CyQqucF-NAFGyBUCwngZmRoZiBKqmWDPjSrTGvFDfOqgtAvTw"
 }
