@@ -1,0 +1,5 @@
+<div class="image-viewer">
+    <img [src]="images[selectedImageIndex]" *ngIf="images && images.length > 0" class="image-view"/>
+    <nb-icon icon="arrow-ios-back-outline" (click)="image_backward()"></nb-icon>
+    <nb-icon icon="arrow-ios-forward-outline" (click)="image_foward()"></nb-icon>
+</div>

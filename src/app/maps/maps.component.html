@@ -1,0 +1,120 @@
+<div class="map-container">
+    <div #mapElement style="width: 100%; height: 100%;"></div>
+
+    <!-- [nbSpinner]="fetchPlacesRunning" nbSpinnerStatus="danger" -->
+    <nb-card class="map-tool-bar">
+        <nb-card-body>
+            <button #btnElement class="map-button" (click)="refreshData()">
+                Refresh Places
+            </button>
+            <button #btnElement class="map-button" (click)="fetchPlaces()">
+                Fetch Places
+            </button>    
+            <button #btnElement class="map-button" (click)="openWindowListPlace()">
+                Places List
+            </button>    
+        </nb-card-body>
+    </nb-card>
+
+    <ng-template #placeWindow style="width: 100%;">
+        <table style="width: 100%;">
+            <tr>
+                <td class="place_detail">
+                    <p><label class="label_category">{{place.place_category}}</label></p>
+                    <div *ngIf="place.verified">
+                        <label class="detail_labe">LastUpdate:</label><br/>
+                        <label class="detail_text">{{ place.verified | slice:0:10 }}</label><br/>
+                        --
+                    </div>
+                    <div *ngIf="place.closing_date">
+                        <label class="detail_labe">Closing:</label><br/>
+                        <label class="detail_text"><b>{{ place.closing_date }}</b></label><br/>
+                        --
+                    </div>
+                    <div *ngIf="place.parking_price">
+                        <label class="detail_labe">Parking $:</label><br/>
+                        <label class="detail_text"><b>{{ place.parking_price }}</b></label><br/>
+                        --
+                    </div>
+                    <div *ngIf="place.service_price">
+                        <label class="detail_labe">Service $:</label><br/>
+                        <label class="detail_text">{{ place.service_price }}</label><br/>
+                        --
+                    </div>
+                    <div *ngIf="place.number_places && place.number_places>0">
+                        <label class="detail_labe">Places:</label><br/>
+                        <label class="detail_text">{{ place.number_places }}</label><br/>
+                        --
+                    </div>
+                    <div *ngIf="place.height_limit && place.height_limit>0">
+                        <label class="detail_labe">Hight:</label><br/>
+                        <label class="detail_text">{{ place.height_limit }}</label><br/>
+                        --
+                    </div>
+                    <div *ngIf="place.water_point && place.water_point>0">
+                        <label class="detail_labe">Water:</label><br/>
+                        <label class="detail_text">{{ place.water_point }}</label><br/>
+                        --
+                    </div>
+                    <div *ngIf="place.black_water && place.black_water>0">
+                        <label class="detail_labe">Black Water:</label><br/>
+                        <label class="detail_text">{{ place.black_water }}</label><br/>
+                        --
+                    </div>
+                    <div *ngIf="place.public_toilet && place.public_toilet>0">
+                        <label class="detail_labe">Toile:</label><br/>
+                        <label class="detail_text">{{ place.public_toilet }}</label><br/>
+                        --
+                    </div>
+                    <div *ngIf="place.shower && place.shower>0">
+                        <label class="detail_labe">Shower:</label><br/>
+                        <label class="detail_text">{{ place.shower }}</label><br/>
+                        --
+                    </div>
+                    <div *ngIf="place.electricity && place.electricity>0">
+                        <label class="detail_labe">Electricity:</label><br/>
+                        <label class="detail_text">{{ place.electricity }}</label><br/>
+                        --
+                    </div>
+                    <div *ngIf="place.has_wifi && place.has_wifi>0">
+                        <label class="detail_labe">Wi-Fi:</label><br/>
+                        <label class="detail_text">{{ place.has_wifi }}</label>
+                    </div>
+                    
+                </td>
+                <td class="place_resume">
+                    <label class="resume_text">{{ place.place_resume }}</label>
+                    <p>
+                        <a href="https://www.google.com/maps?q={{place.place_latitude}},{{place.place_longitude}}" target="_blank" style="text-decoration: none;">
+                            <span class="caption-2 text-hint">[{{place.place_latitude}},{{place.place_longitude}}] - {{ place.place_address }}</span>
+                        </a>
+                    </p>
+                    <hr>
+                    <ng-container *ngIf="place.photos && place.photos.length > 0">
+                        <div class="photo-container">
+                            <div *ngFor="let photoUrl of place.photos">
+                                <img src="{{photoUrl.link_thumb}}" (click)="openFullImage(photoUrl.link_large)"
+                                    class="photo-item">
+                            </div>
+                        </div>
+                    </ng-container>
+                </td>
+            </tr>
+        </table>
+    </ng-template>
+    <ng-template #placeWindowClose>
+        Click escape to close.
+    </ng-template>
+
+    <ng-template #listPlacesWindow style="height: 200px;">
+        <div>
+            <!-- <ng2-smart-table [settings]="tableColumns" [source]="placesList"></ng2-smart-table> -->
+        </div>
+
+    </ng-template>
+    <ng-template #listPlacesWindowClose>
+        Click escape to close.
+    </ng-template>
+
+
+</div>
