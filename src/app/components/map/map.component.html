@@ -1,8 +1,25 @@
 <div class="map-container">
     <div class="toolbar">
         <div class="section">
-            <button>1</button>
-            <button>2</button>
+
+            <select (change)="mapSelect($event)" id="mapselect">
+                <option>Bing</option>
+                <option>OSM</option>
+            </select>
+
+            <select *ngIf="selectedLayer == 'Bing'" 
+                    (change)="mapSelect($event)" 
+                    [value]="bingStyleMap"
+                    id="bingselect">
+                <option>RoadOnDemand</option>
+                <option>Aerial</option>
+                <option>AerialWithLabelsOnDemand</option>
+                <option>CanvasDark</option>
+                <option>OrdnanceSurvey</option>
+            </select>
+
+
+            <button (click)="updateTrackingStatus()">{{ trackingStatus ? 'Stop Tracking' : 'Start Tracking' }}</button>
         </div>
 
         <div class="section center">
@@ -12,7 +29,7 @@
 
         <div class="section">
             <button>5</button>
-            <button (click)="toggleFullScreenMap()">[]</button>
+            <button (click)="toggleFullScreenMap()">[[ ]]</button>
         </div>
     </div>
 

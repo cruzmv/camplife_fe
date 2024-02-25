@@ -18,6 +18,8 @@ import { NbWindowService } from '@nebular/theme';
 import { ImageViewerComponent } from '../components/image-viewer/image-viewer.component';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 
+import { parameters } from '../config';
+
 
 //import { Ng2SmartTableModule, LocalDataSource } from 'ng2-smart-table';
 
@@ -342,7 +344,7 @@ export class MapsComponent implements AfterViewInit, OnDestroy {
     this.map.addLayer(
       new TileLayer({
         source: new BingMaps({
-          key: 'Ak58h4YF2UZVGY4CyQqucF-NAFGyBUCwngZmRoZiBKqmWDPjSrTGvFDfOqgtAvTw',
+          key: parameters.bingKey,
           imagerySet: 'AerialWithLabelsOnDemand',
         }),
       })

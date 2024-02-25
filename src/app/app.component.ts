@@ -16,16 +16,11 @@ export class AppComponent {
       icon: 'home-outline',
       link: '/dashboard'
     },
-    {
-      title: 'Maps',
-      icon: 'map-outline',
-      link: '/maps'
-    },
-    {
-      title: 'Maps2',
-      icon: 'map-outline',
-      link: '/maps2'
-    },
+    // {
+    //   title: 'Maps',
+    //   icon: 'map-outline',
+    //   link: '/maps'
+    // },
     {
       title: 'Finance',
       icon: 'percent-outline',

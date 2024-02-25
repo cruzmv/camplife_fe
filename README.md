@@ -1,3 +1,26 @@
+Angular CLI: 17.1.3
+Node: 18.18.2
+Package Manager: npm 9.8.1
+OS: linux x64
+
+Angular: 17.1.3
+... animations, cli, common, compiler, compiler-cli, core, forms
+... platform-browser, platform-browser-dynamic, platform-server
+... router, ssr
+
+Package                         Version
+---------------------------------------------------------
+@angular-devkit/architect       0.1701.3
+@angular-devkit/build-angular   17.1.3
+@angular-devkit/core            17.1.3
+@angular-devkit/schematics      17.1.3
+@angular/cdk                    17.1.2
+@schematics/angular             17.1.3
+rxjs                            7.8.1
+typescript                      5.3.3
+zone.js                         0.14.3
+
+
 # Camplife
 
 This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 17.1.3.

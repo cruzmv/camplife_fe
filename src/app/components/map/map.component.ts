@@ -1,8 +1,8 @@
 import { AfterViewInit, Component, ElementRef, ViewChild } from '@angular/core';
+import { parameters } from '../../config';
 import Map from 'ol/Map';
 import View from 'ol/View';
 import TileLayer from 'ol/layer/Tile';
-import BingMaps from 'ol/source/BingMaps';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import { transform } from 'ol/proj';
@@ -12,6 +12,10 @@ import Style from 'ol/style/Style';
 import Fill from 'ol/style/Fill';
 import Stroke from 'ol/style/Stroke';
 import CircleStyle from 'ol/style/Circle'
+import BingMaps from 'ol/source/BingMaps';
+import OSM from 'ol/source/OSM';
+import { HttpClient } from '@angular/common/http';
+
 
 @Component({
   selector: 'app-map',
@@ -20,15 +24,22 @@ import CircleStyle from 'ol/style/Circle'
 })
 export class MapComponent implements AfterViewInit {
   @ViewChild('mapElement', { static: false }) mapElement!: ElementRef;
-  map: Map = new Map(); // Initialize here
+  map: Map = new Map({
+    controls: []
+  });
   isMapFullScreen: boolean = false;
+  selectedLayer: string = 'Bing';
+  bingStyleMap: string = 'AerialWithLabelsOnDemand';
+  mapZoon: number = 18;
+  gpsData: any = [];
+  trackingStatus: boolean = true;
+  intervalId: any;
 
-
+  constructor(private httpClient: HttpClient) { }
 
   ngAfterViewInit(): void {
     this.initializeMap();
     this.centerToCurrentPosition();
-
   }
 
   toggleFullScreenMap() {
@@ -40,32 +51,54 @@ export class MapComponent implements AfterViewInit {
     }
   }
 
+  mapSelect(event: any){
+    if (event.currentTarget.id == "mapselect"){
+      this.selectedLayer = event.currentTarget.value;
+    } else if (event.currentTarget.id == "bingselect"){
+      this.bingStyleMap = event.currentTarget.value;
+    }
+
+    this.updateMapLayer();
+    this.centerToCurrentPosition();
+  }
+
+  updateTrackingStatus(){
+    this.trackingStatus = !this.trackingStatus;
+    if (this.trackingStatus){
+      this.intervalId = setInterval(() => {
+        this.centerToCurrentPosition();
+      }, 1000);
+      this.centerToCurrentPosition();
+    } else {
+      clearInterval(this.intervalId)
+    }
+  }
+
   //#region privates
   private initializeMap(): void {
     this.map.setTarget(this.mapElement.nativeElement);
-
-    this.map.addLayer(
-      new TileLayer({
-        source: new BingMaps({
-          key: 'Ak58h4YF2UZVGY4CyQqucF-NAFGyBUCwngZmRoZiBKqmWDPjSrTGvFDfOqgtAvTw',
-          imagerySet: 'AerialWithLabelsOnDemand',
-        }),
-      })
-    )
-
+    this.updateMapLayer();
     const vectorLayer = new VectorLayer({
       source: new VectorSource(),
     });
     this.map.addLayer(vectorLayer);
 
-    this.map.setView(
-      new View({
-        center: [0, 0],
-        zoom: 5
-      })
-    )
+    const viewr = new View({
+      center: transform([0, 0], 'EPSG:4326', 'EPSG:3857')
+    })
 
-    //this.map.on('click', (event) => this.onMapClick(event));
+    this.map.setView(viewr)
+
+    viewr.on('change:resolution', () => {
+      const zoomLevel = viewr.getZoom();
+      if (zoomLevel)
+        this.mapZoon = zoomLevel
+    });
+
+    this.intervalId = setInterval(() => {
+      this.centerToCurrentPosition();
+    }, 1000);
+
   }
 
   private centerToCurrentPosition() {
@@ -73,6 +106,7 @@ export class MapComponent implements AfterViewInit {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const coordinates: any = [position.coords.longitude, position.coords.latitude];
+          this.recordGeoPosition(coordinates);
           this.centerAndZoomToLocation(coordinates); // Change zoom level as needed
         },
         (error) => {
@@ -84,10 +118,32 @@ export class MapComponent implements AfterViewInit {
     }
   }
 
+  private recordGeoPosition(coordinates: any){
+    const dateTime: any = new Date();
+    let timeLaps = null;
+    if (this.gpsData.length > 0){
+      const lastItem = this.gpsData[this.gpsData.length-1]
+      timeLaps = dateTime - lastItem.datetime
+    }
+    const geoData = {
+      lat: coordinates[0],
+      long: coordinates[1],
+      datetime: dateTime,
+      elapstime: timeLaps
+    }
+    this.gpsData.push(geoData)
+
+    this.httpClient.post("http://192.168.1.67:3000/log_geo", geoData).subscribe((response: any) => {
+      //console.log(response);
+    });
+
+  }
+
+
   private centerAndZoomToLocation(coordinates: [number, number]): void {
     const bingCoordinates = this.google2BingPosition(coordinates[1], coordinates[0]);
     this.map.getView().setCenter(bingCoordinates);
-    this.map.getView().setZoom(16);
+    this.map.getView().setZoom(this.mapZoon);
 
     const pointGeometry = new Point(bingCoordinates);
     const pointFeature = new Feature({
@@ -117,6 +173,27 @@ export class MapComponent implements AfterViewInit {
 
   private google2BingPosition(googleLat: number, googleLong: number) {
     return transform([googleLong, googleLat], 'EPSG:4326', 'EPSG:3857');
+  }
+
+  private updateMapLayer() {
+    this.map.getLayers().clear(); // Clear existing layers
+    const layer = this.selectedLayer === 'Bing' ? this.createBingLayer() : this.createOSMLayer();
+    this.map.addLayer(layer); // Add selected layer to map
+  }
+
+  private createBingLayer() {
+    return new TileLayer({
+      source: new BingMaps({
+        key: parameters.bingKey,
+        imagerySet: this.bingStyleMap,
+      }),
+    });
+  }
+
+  private createOSMLayer() {
+    return new TileLayer({
+      source: new OSM()
+    });
   }
   //#endregion privates
 
