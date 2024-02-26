@@ -40,10 +40,20 @@
         </div>
 
         <div class="section">
-            <button>5</button>
+            <button (click)="windowDebug()">Debug [{{debugWindow?'ON':'OFF'}}]</button>
             <button (click)="toggleFullScreenMap()">[[ ]]</button>
         </div>
     </div>
 
     <div #mapElement class="map"></div>
+</div>
+
+<div *ngIf="debugWindow" class="debug">
+    <textarea #debugText 
+              nbInput
+              fullWidth 
+              placeholder="Full width"
+              id="debugText"
+              class="debugText">
+    </textarea>
 </div>

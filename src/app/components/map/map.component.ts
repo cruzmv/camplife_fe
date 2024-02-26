@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, Inject, ViewChild } from '@angular/core';
 import { parameters } from '../../config';
 import Map from 'ol/Map';
 import View from 'ol/View';
@@ -16,6 +16,7 @@ import BingMaps from 'ol/source/BingMaps';
 import OSM from 'ol/source/OSM';
 import { HttpClient } from '@angular/common/http';
 import XYZ from 'ol/source/XYZ';
+import { DOCUMENT } from '@angular/common';
 
 @Component({
   selector: 'app-map',
@@ -24,6 +25,7 @@ import XYZ from 'ol/source/XYZ';
 })
 export class MapComponent implements AfterViewInit {
   @ViewChild('mapElement', { static: false }) mapElement!: ElementRef;
+  @ViewChild('debugText') debugText!: ElementRef;
   map: Map = new Map({
     controls: []
   });
@@ -35,8 +37,11 @@ export class MapComponent implements AfterViewInit {
   gpsData: any = [];
   trackingStatus: boolean = true;
   intervalId: any;
+  debugWindow: boolean = false;
 
-  constructor(private httpClient: HttpClient) { }
+  constructor(private httpClient: HttpClient, @Inject(DOCUMENT) private document: any) { }
+  //@Inject(Document) private document: Document
+
 
   ngAfterViewInit(): void {
     this.initializeMap();
@@ -47,8 +52,16 @@ export class MapComponent implements AfterViewInit {
     this.isMapFullScreen = !this.isMapFullScreen;
     if (this.isMapFullScreen) {
       this.mapElement.nativeElement.classList.add('fullscreen-map');
+      if (this.document.documentElement.requestFullscreen){
+        this.document.documentElement.requestFullscreen();
+      }
+  
     } else {
       this.mapElement.nativeElement.classList.remove('fullscreen-map');
+      if (this.document.documentElement.exitFullscreen){
+        this.document.documentElement.exitFullscreen();
+      }
+  
     }
   }
 
@@ -91,6 +104,10 @@ export class MapComponent implements AfterViewInit {
     }
   }
 
+  windowDebug(){
+    this.debugWindow = !this.debugWindow;
+  }
+
   //#region privates
   private initializeMap(): void {
     this.map.setTarget(this.mapElement.nativeElement);
@@ -122,6 +139,12 @@ export class MapComponent implements AfterViewInit {
 
   private centerToCurrentPosition() {
     if ('geolocation' in navigator) {
+      const options = {
+        enableHighAccuracy: true,
+        timeout: 1000,  // Timeout in milliseconds
+        maximumAge: 0   // No maximum age for cached positions
+      };
+
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const coordinates: any = [position.coords.longitude, position.coords.latitude];
@@ -130,7 +153,8 @@ export class MapComponent implements AfterViewInit {
         },
         (error) => {
           console.error('Error getting user location:', error);
-        }
+        },
+        options
       );
     } else {
       console.warn('Geolocation is not supported in this browser.');
@@ -152,17 +176,32 @@ export class MapComponent implements AfterViewInit {
     }
     this.gpsData.push(geoData)
 
+    this.logDebug(JSON.stringify(geoData));
     this.httpClient.post("http://192.168.1.67:3000/log_geo", geoData).subscribe((response: any) => {
-      //console.log(response);
+      this.logDebug(JSON.stringify(response));
+    },error => {
+      this.logDebug(error);
     });
 
   }
 
+  private logDebug(value: string){
+    if (this.debugWindow != undefined){
+      const now = new Date();
+      const datetimeString = String(now.getFullYear())+String(now.getMonth()+1).padStart(2, '0')+String(now.getDate()).padStart(2, '0')+'T'+String(now.getHours()).padStart(2, '0')+String(now.getMinutes()).padStart(2, '0')+String(now.getSeconds()).padStart(2, '0')
+      const logString = `[${datetimeString}] ${value} \n`;
+
+      this.debugText.nativeElement.value += logString;
+      this.debugText.nativeElement.scrollTop = this.debugText.nativeElement.scrollHeight;
+    }
+  }
 
   private centerAndZoomToLocation(coordinates: [number, number]): void {
     const bingCoordinates = this.google2BingPosition(coordinates[1], coordinates[0]);
     this.map.getView().setCenter(bingCoordinates);
     this.map.getView().setZoom(this.mapZoon);
+
+    this.clearVectorLayer();
 
     const pointGeometry = new Point(bingCoordinates);
     const pointFeature = new Feature({
@@ -186,9 +225,19 @@ export class MapComponent implements AfterViewInit {
       source: vectorSource
     });
     this.map.addLayer(vectorLayer);
-
-
   }
+
+  private clearVectorLayer(): void {
+    // Get all layers in the map
+    const layers = this.map.getLayers().getArray();
+
+    // Iterate through the layers and remove the vector layer if it exists
+    layers.forEach(layer => {
+        if (layer instanceof VectorLayer) {
+            this.map.removeLayer(layer);
+        }
+    });
+  }  
 
   private google2BingPosition(googleLat: number, googleLong: number) {
     return transform([googleLong, googleLat], 'EPSG:4326', 'EPSG:3857');
@@ -227,6 +276,7 @@ export class MapComponent implements AfterViewInit {
       source: new OSM()
     });
   }
+
   //#endregion privates
 
 }
