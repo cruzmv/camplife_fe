@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, Inject, TemplateRef, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, Inject, TemplateRef, ViewChild } from '@angular/core';
 import { parameters } from '../../config';
 import Map from 'ol/Map';
 import View from 'ol/View';
@@ -22,7 +22,13 @@ import Icon from 'ol/style/Icon';
 import Text from 'ol/style/Text';
 import { NbWindowService } from '@nebular/theme';
 import LineString from 'ol/geom/LineString';
-import Control from 'ol/control/Control';
+import * as polyline from '@mapbox/polyline';
+
+
+interface pointOptions {
+  color: string,
+  name: string
+}
 
 @Component({
   selector: 'app-map',
@@ -38,19 +44,22 @@ export class MapComponent implements AfterViewInit {
     controls: []
   });
   isMapFullScreen: boolean = false;
-  selectedLayer: string = 'Bing';
+  selectedLayer: string = 'Google';
   bingStyleMap: string = 'AerialWithLabelsOnDemand';
   googleStyleMap: string = 'http://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}';
   mapZoon: number = 16;
   gpsData: any = [];
   trackingStatus: boolean = false;
   intervalId: any;
-  debugWindow: boolean = false;
+  debugWindow: boolean = true;
+  routeToolbar: boolean = false;
   places: any[] = [];
   place: any;
   tooltipOverlay!: Overlay;
   routeFrom: any;
   routeTo: any;
+  apiEndPoint = 'http://cruzmv.ddns.net:3000/';
+  watchGeoId: any;
   location_icons = [
     { category: 'Fuel Station', src: 'assets/gas-pump.png' },
     { category: 'Showers', src: 'assets/shower.png' },
@@ -75,13 +84,24 @@ export class MapComponent implements AfterViewInit {
     { category: 'HOMESTAYS ACCOMMODATION', src: 'assets/homestay.png' },
   ];
 
-  constructor(private httpClient: HttpClient, @Inject(DOCUMENT) private document: any,
+  constructor(private httpClient: HttpClient,
+              @Inject(DOCUMENT) private document: any,
               private windowService: NbWindowService) { }
+
+  @HostListener('window:offline', ['$event'])
+  onOffline(event: any) {
+    this.logDebug('You are offline!');
+  }
+
+  @HostListener('window:online', ['$event'])
+  onOnline(event: any) {
+    this.logDebug('You are online!');
+  }
 
   ngAfterViewInit(): void {
     this.photoView.nativeElement.hidden = true;
     this.initializeMap();
-    this.centerToCurrentPosition();
+    //this.centerToCurrentPosition();
 
     const places = localStorage.getItem('places');
     if (places != null){
@@ -90,6 +110,26 @@ export class MapComponent implements AfterViewInit {
         this.addMarkers();
       }, 500);
     }
+
+    const event = {
+      currentTarget: {
+        id: "googleselect",
+        value: "Hybrid"
+      }
+    }
+    this.mapSelect(event);
+
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', this.handleOrientation.bind(this), true);
+      this.logDebug(`window.DeviceOrientationEvent exists`);
+    } else {
+      this.logDebug('Device orientation not supported');
+    }
+
+
+    // Cache map tiles trying
+    //this.cacheMapTiles();
+
   }
 
   toggleFullScreenMap() {
@@ -99,13 +139,13 @@ export class MapComponent implements AfterViewInit {
       if (this.document.documentElement.requestFullscreen){
         this.document.documentElement.requestFullscreen();
       }
-  
+
     } else {
       this.mapElement.nativeElement.classList.remove('fullscreen-map');
       if (this.document.documentElement.exitFullscreen){
         this.document.documentElement.exitFullscreen();
       }
-  
+
     }
   }
 
@@ -133,7 +173,6 @@ export class MapComponent implements AfterViewInit {
     }
 
     this.updateMapLayer();
-    //this.centerToCurrentPosition();
 
     setTimeout(() => {
         this.addMarkers();
@@ -144,13 +183,19 @@ export class MapComponent implements AfterViewInit {
   updateTrackingStatus(){
     this.trackingStatus = !this.trackingStatus;
     if (this.trackingStatus){
-      this.intervalId = setInterval(() => {
-        this.centerToCurrentPosition();
-      }, 1000);
-      this.centerToCurrentPosition();
+      this.startWatchingPosition();
     } else {
-      clearInterval(this.intervalId)
+      this.stopWatchingPosition();
     }
+    // this.trackingStatus = !this.trackingStatus;
+    // if (this.trackingStatus){
+    //   this.intervalId = setInterval(() => {
+    //     this.centerToCurrentPosition();
+    //   }, 1000);
+    //   this.centerToCurrentPosition();
+    // } else {
+    //   clearInterval(this.intervalId)
+    // }
   }
 
   windowDebug(){
@@ -166,9 +211,9 @@ export class MapComponent implements AfterViewInit {
       centerCoordinates = this.map.getView().getCenter() as any;
     }
     const [long, lat] = this.bing2GooglePosition(centerCoordinates[0], centerCoordinates[1]);
-    this.logDebug(`Google coordinates: ${[long, lat]}`);
+    this.logDebug(`Google coordinates: ${JSON.stringify([long, lat])}`);
 
-    const apiUrl = 'http://192.168.1.67:3000/get_place_list';
+    const apiUrl = `${this.apiEndPoint}get_place_list`;
     const queryParams = { lat: lat.toString(), long: long.toString() };
 
     this.httpClient.get(apiUrl, { params: queryParams }).subscribe((response: any) => {
@@ -178,7 +223,7 @@ export class MapComponent implements AfterViewInit {
       this.addMarkers();
     },
       (error) => {
-        this.logDebug(`Error fetching places: ${error}`);
+        this.logDebug(`Error fetching places: ${JSON.stringify(error)}`);
       }
     );
   }
@@ -205,7 +250,7 @@ export class MapComponent implements AfterViewInit {
 
         const thumbPhotoItem = document.createElement('div');
         thumbPhotoItem.style.cursor = "pointer";
-        
+
         thumbImage.addEventListener('click', () => {
           this.photoView.nativeElement.children[1].children.main_foto.src = photo.link_thumb;
         });
@@ -232,11 +277,33 @@ export class MapComponent implements AfterViewInit {
     this.cleanMap();
   }
 
+  async addRoute() {
+
+    this.routeToolbar = !this.routeToolbar;
+
+    /*
+    const from_geometry: any = await this.locateFeature("dotFeature");
+    const from_coordinates = from_geometry.getCoordinates();
+    const from_coordinates_google: any = this.bing2GooglePosition(from_coordinates[0],from_coordinates[1]);
+
+    const to_geometry: any = await this.locateFeature("pinpoint");
+    const to_coordinates = to_geometry.getCoordinates();
+    const to_coordinates_google: any = this.bing2GooglePosition(to_coordinates[0],to_coordinates[1]);
+
+    
+    this.calculateRoute(from_coordinates_google,to_coordinates_google);
+    //this.calculateRoute(this.routeFrom,this.routeTo);
+
+    this.routeFrom = undefined;
+    this.routeTo = undefined;
+    */
+  }
+
   //#region privates
   private initializeMap(): void {
     this.map.setTarget(this.mapElement.nativeElement);
     this.updateMapLayer();
-    
+
     // const vectorLayer = new VectorLayer({
     //   source: new VectorSource(),
     // });
@@ -251,13 +318,37 @@ export class MapComponent implements AfterViewInit {
 
     viewr.on('change:resolution', () => {
       const zoomLevel = viewr.getZoom();
-      if (zoomLevel)
+      if (zoomLevel){
         this.mapZoon = zoomLevel
+        this.logDebug(`zoom: ${this.mapZoon}`);
+      }
     });
 
-    // this.intervalId = setInterval(() => {
-    //   this.centerToCurrentPosition();
-    // }, 1000);
+    /*   Caching trying
+    viewr.on('change:center', () => {
+      const newCenter = viewr.getCenter();
+      const extent = this.map.getView().calculateExtent(this.map.getSize());
+      const newBbox = [
+          extent[0], // minx
+          extent[1], // miny
+          extent[2], // maxx
+          extent[3]  // maxy
+      ];
+      this.handleMapMovement(newBbox);
+    });
+
+    viewr.on('change:resolution', () => {
+      const extent = this.map.getView().calculateExtent(this.map.getSize());
+      const newBbox = [
+          extent[0], // minx
+          extent[1], // miny
+          extent[2], // maxx
+          extent[3]  // maxy
+      ];
+      this.handleMapMovement(newBbox);
+    });
+    */
+
     this.trackingStatus = true;
     this.updateTrackingStatus();
 
@@ -284,11 +375,11 @@ export class MapComponent implements AfterViewInit {
           const place = this.places.find((p) => p.place_id === feature.getProperties()['id']);
           let tooltipContent = '';
           if (place){
-            
+
             if (place.parking_price) {
               tooltipContent += " " + place.parking_price;
             }
-            
+
             if (place.service_price) {
               tooltipContent += " " + place.service_price
             }
@@ -330,18 +421,19 @@ export class MapComponent implements AfterViewInit {
             //{ title: this.place.place_name, hasBackdrop: false, closeOnEsc: false },
             { title: this.place.place_name, hasBackdrop: true },
           );
-      
+
         }
+      } else {
+        this.clearVectorLayer("pinpoint");
+        this.drawPoint(event.coordinate,{name: "pinpoint", color: "red"});
       }
 
       // const coordinates: any = this.map.getView().getCenter();
       // this.logDebug(`bing: ${JSON.stringify(coordinates)}`);
       // this.logDebug(`google: ${JSON.stringify(this.bing2GooglePosition(coordinates[0],coordinates[1]))}`);
       // this.logDebug(`coords: ${transform(coordinates, 'EPSG:3857', 'EPSG:4326')}`)
-
       const coordinates: any = this.bing2GooglePosition(event.coordinate[0],event.coordinate[1]);
       this.logDebug(`coords: ${ coordinates  }`);
-      
 
       if (this.routeFrom == undefined){
         this.routeFrom = coordinates
@@ -351,11 +443,33 @@ export class MapComponent implements AfterViewInit {
       }
 
     });
-    
-    
   }
 
-  private centerToCurrentPosition() {
+  // private centerToCurrentPosition() {
+  //   if ('geolocation' in navigator) {
+  //     const options = {
+  //       enableHighAccuracy: true,
+  //       timeout: 1000,  // Timeout in milliseconds
+  //       maximumAge: 0   // No maximum age for cached positions
+  //     };
+
+  //     navigator.geolocation.getCurrentPosition(
+  //       (position) => {
+  //         const coordinates: any = [position.coords.longitude, position.coords.latitude];
+  //         this.recordGeoPosition(coordinates);
+  //         this.centerAndZoomToLocation(coordinates); // Change zoom level as needed
+  //       },
+  //       (error) => {
+  //         this.logDebug(`GetPosition Error: ${JSON.stringify(error)}`);
+  //       },
+  //       options
+  //     );
+  //   } else {
+  //     this.logDebug('Geolocation is not supported in this browser.');
+  //   }
+  // }
+
+  private startWatchingPosition() {
     if ('geolocation' in navigator) {
       const options = {
         enableHighAccuracy: true,
@@ -363,7 +477,7 @@ export class MapComponent implements AfterViewInit {
         maximumAge: 0   // No maximum age for cached positions
       };
 
-      navigator.geolocation.getCurrentPosition(
+      this.watchGeoId = navigator.geolocation.watchPosition(
         (position) => {
           const coordinates: any = [position.coords.longitude, position.coords.latitude];
           this.recordGeoPosition(coordinates);
@@ -376,6 +490,12 @@ export class MapComponent implements AfterViewInit {
       );
     } else {
       this.logDebug('Geolocation is not supported in this browser.');
+    }
+  }
+
+  private stopWatchingPosition() {
+    if (this.watchGeoId) {
+      navigator.geolocation.clearWatch(this.watchGeoId);
     }
   }
 
@@ -395,10 +515,10 @@ export class MapComponent implements AfterViewInit {
     this.gpsData.push(geoData)
 
     this.logDebug(JSON.stringify(geoData));
-    this.httpClient.post("http://192.168.1.67:3000/log_geo", geoData).subscribe((response: any) => {
+    this.httpClient.post(`${this.apiEndPoint}log_geo`, geoData).subscribe((response: any) => {
       this.logDebug(JSON.stringify(response));
     },error => {
-      this.logDebug(error);
+      this.logDebug(JSON.stringify(error));
     });
 
   }
@@ -423,32 +543,8 @@ export class MapComponent implements AfterViewInit {
     const bingCoordinates = this.google2BingPosition(coordinates[1], coordinates[0]);
     this.map.getView().setCenter(bingCoordinates);
     this.map.getView().setZoom(this.mapZoon);
-
     this.clearVectorLayer("dotFeature");
-
-    const pointGeometry = new Point(bingCoordinates);
-    const pointFeature = new Feature({
-      geometry: pointGeometry,
-      identifier: "dotFeature"
-    });
-
-    const pointStyle = new Style({
-      image: new CircleStyle({
-        radius: 6,
-        fill: new Fill({ color: '#3083e3' }), // Set the fill color to blue
-        stroke: new Stroke({ color: 'white', width: 1 }) // Set the border color and width
-      })
-    });
-
-    pointFeature.setStyle(pointStyle);
-
-    const vectorSource = new VectorSource({
-      features: [pointFeature]
-    });
-    const vectorLayer = new VectorLayer({
-      source: vectorSource,
-    });
-    this.map.addLayer(vectorLayer);
+    this.drawPoint(bingCoordinates,{name: "dotFeature", color: "#3083e3"});
   }
 
   private clearVectorLayer(identifier: string|undefined = undefined): void {
@@ -469,7 +565,26 @@ export class MapComponent implements AfterViewInit {
           }
         }
     });
-  }  
+  }
+
+  private async locateFeature(name: string){
+    let geometry = undefined;
+    const layers = this.map.getLayers().getArray();
+    await layers.forEach(async layer => {
+      if (layer instanceof VectorLayer) {
+        const source = layer.getSource();
+        if (source instanceof VectorSource) {
+          const features = source.getFeatures();
+          await features.forEach(feature => {
+            if (name == undefined || feature.get("identifier") === name) {
+                geometry = feature.getGeometry();        
+            }
+          });
+        }
+      }
+    });
+    return geometry;
+  }
 
   private bing2GooglePosition(bingLat: number, bingLong: number) {
     return transform([bingLat, bingLong], 'EPSG:3857', 'EPSG:4326');
@@ -478,28 +593,6 @@ export class MapComponent implements AfterViewInit {
   private google2BingPosition(googleLat: number, googleLong: number) {
     return transform([googleLong, googleLat], 'EPSG:4326', 'EPSG:3857');
   }
-
-  // private updateMapLayer() {
-  //   this.map.getLayers().clear(); // Clear existing layers
-  //   let layer: any = null;
-  //   if (this.selectedLayer === 'Bing'){
-  //     layer = this.createBingLayer();
-  //   } else if(this.selectedLayer == 'OSM') {
-  //     layer = this.createOSMLayer();
-  //   } else if (this.selectedLayer == 'Google'){
-  //     layer = new TileLayer({
-  //       source: new XYZ({
-  //         url: this.googleStyleMap
-  //       })
-  //     });
-  //   }
-
-  //   const vectorLayer = new VectorLayer({
-  //     source: layer
-  //   });    
-
-  //   this.map.addLayer(vectorLayer)
-  // }
 
   private updateMapLayer() {
     this.map.getLayers().clear(); // Clear existing layers
@@ -517,6 +610,7 @@ export class MapComponent implements AfterViewInit {
     } else if (this.selectedLayer == 'Google'){
         // Create Google source
         layer = new TileLayer({
+            preload: Infinity,
             source: new XYZ({
                 url: this.googleStyleMap
             })
@@ -528,7 +622,7 @@ export class MapComponent implements AfterViewInit {
         // Create VectorLayer with the vectorSource
         const vectorLayer = new VectorLayer({
             source: vectorSource
-        });    
+        });
 
         this.map.addLayer(layer); // Add the selected layer to the map
         this.map.addLayer(vectorLayer); // Add the VectorLayer to the map
@@ -539,6 +633,7 @@ export class MapComponent implements AfterViewInit {
 
   private createBingLayer() {
     return new TileLayer({
+      preload: Infinity,
       source: new BingMaps({
         key: parameters.bingKey,
         imagerySet: this.bingStyleMap,
@@ -548,6 +643,7 @@ export class MapComponent implements AfterViewInit {
 
   private createOSMLayer() {
     return new TileLayer({
+      preload: Infinity,
       source: new OSM()
     });
   }
@@ -593,7 +689,7 @@ export class MapComponent implements AfterViewInit {
               offsetY: 5,
               fill: new Fill({color: 'rgb(0,0,0)'}),
               stroke: new Stroke({color: 'rgb(255,255,255)', width: 1})
-            }) 
+            })
 
           });
 
@@ -624,26 +720,173 @@ export class MapComponent implements AfterViewInit {
   private updatePlacesWithCoordinate(bingLat: number, bingLong: number): void {
     //const [long, lat] = transform([bingLat, bingLong],'EPSG:3857','EPSG:4326');
     const [long, lat] = this.bing2GooglePosition(bingLat, bingLong);
-    const apiUrl = 'http://192.168.1.67:3000/update_place_coordinate';
+    const apiUrl = `${this.apiEndPoint}update_place_coordinate`;
     const requestBody = { lat: lat, long: long };
 
     this.httpClient.post(apiUrl, requestBody).subscribe((response: any) => {
       this.logDebug(`Finished update region ${JSON.stringify(requestBody)}`);
       this.fetchPlaces(bingLat, bingLong);
+    },
+    error=>{
+      this.logDebug(`updatePlacesWithCoordinate ${JSON.stringify(error)}`)
     });
   }
 
 
+/* Cache trying
+  private async cacheMapTiles() {
+    const bbox = [-180, -90, 180, 90]; // Define the bounding box for caching tiles
+    const tileUrls = this.generateTileUrls(bbox);
 
-  calculateRoute(start: [number, number], end: [number, number]) {
+    for (const url of tileUrls) {
+        try {
+            const blob = await this.fetchAndCacheTile(url);
+            console.log('Tile cached successfully:', url);
+        } catch (error) {
+            console.error('Error caching tile:', url, error);
+        }
+    }
+  }
+
+  private generateTileUrls(bbox: number[]): string[] {
+    // Generate tile URLs based on the bounding box
+    // Adjust according to the tile service you are using
+    const tileUrls: string[] = [];
+    const baseUrl = 'http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}';
+    //const baseUrl = 'http://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}';
+    //http://mt0.google.com/vt/lyrs=y&hl=en&x=3925&y=3096&z=13
+    //https://t0.ssl.ak.dynamic.tiles.virtualearth.net/comp/ch/0?mkt=en-US&it=A,G,L&og=2431&n=z
+    //http://mt0.google.com/vt/lyrs=m&hl=en&x=244&y=193&z=9
+
+    const minZoom = 0; // Minimum zoom level
+    const maxZoom = 4; // Maximum zoom level
+
+    // Iterate over the specified range of zoom levels and tile coordinates
+    for (let z = minZoom; z <= maxZoom; z++) {
+        const maxTileCoord = Math.pow(2, z);
+        for (let x = 0; x < maxTileCoord; x++) {
+            for (let y = 0; y < maxTileCoord; y++) {
+                const url = baseUrl
+                    .replace('{z}', z.toString())
+                    .replace('{x}', x.toString())
+                    .replace('{y}', y.toString());
+                tileUrls.push(url);
+            }
+        }
+    }
+
+    return tileUrls;
+  }
+
+  private async fetchAndCacheTile(url: string): Promise<Blob> {
+    // Check if the tile is already cached in sessionStorage
+    const cachedTileBase64 = sessionStorage.getItem(url);
+    if (cachedTileBase64) {
+        // Convert the base64 string back to a Blob
+        const byteCharacters = atob(cachedTileBase64.split(',')[1]);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray]);
+        return blob;
+    }
+
+    // Fetch the tile if not cached and cache it
+    const response = await fetch(url);
+    const blob = await response.blob();
+    // Cache the tile in sessionStorage
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const base64Data = event.target?.result as string;
+        sessionStorage.setItem(url, base64Data); // Store the base64 string in sessionStorage
+    };
+    reader.readAsDataURL(blob);
+
+    return blob;
+  }
+
+  // Assume you have a function to handle map movements
+  // This function is called whenever the map is moved to a new location
+  private async handleMapMovement(newBbox: number[]): Promise<void> {
+    const tileUrls = this.generateTileUrls(newBbox);
+
+    for (const url of tileUrls) {
+        try {
+            // Check if the tile is already cached
+            const cachedTile = await this.fetchAndCacheTile(url);
+            console.log('Tile fetched and cached successfully:', url);
+        } catch (error) {
+            console.error('Error caching tile:', url, error);
+        }
+    }
+  }
+*/
+
+  private handleOrientation(event: DeviceOrientationEvent) {
+    if (event.alpha !== null) {
+      const compassHeading = event.alpha;
+      const bearingToNorth = 360 - compassHeading;
+
+      this.logDebug(`North: ${bearingToNorth}`)
+
+      //const map = document.getElementById('map') as any;
+      //map.setRotation(bearingToNorth);
+      this.map.getView().setRotation(bearingToNorth);
+    } else {
+      this.logDebug(`no event.alpha`);
+    }
+  }
+
+  private calculateRoute(start: [number, number], end: [number, number]) {
+
+    const postUrl = `https://api.openrouteservice.org/v2/directions/driving-car`;
+    const header = {
+      Authorization: "5b3ce3597851110001cf6248822f7a9d64924aa5bb3fb8ace99891d2"
+    };
+    const body = {
+      "coordinates":[
+        start,
+        end
+      ],
+      "options":{
+        "avoid_features":[
+          "tollways"
+        ]
+      }
+    }
+    this.httpClient.post(postUrl, body, {headers: header} ).subscribe((response: any)=>{
+      
+      const polylineString = response.routes[0].geometry;
+      const routeCoordinates = polyline.decode(polylineString).map(coords => [coords[1], coords[0]]);
+      const routeFeature: any = new Feature({
+        geometry: new LineString(routeCoordinates).transform('EPSG:4326', 'EPSG:3857'),
+        identifier: 'routeFeature'
+      });
+      const routeStyle = new Style({
+        stroke: new Stroke({
+          color: '#1F80E7',
+          width: 6
+        })
+      });
+      this.clearVectorLayer("routeFeature");
+      routeFeature.setStyle(routeStyle);
+
+      const vectorLayer = this.map.getLayers().getArray().find((layer) => layer instanceof VectorLayer) as VectorLayer<VectorSource>;
+      const vectorSource: any = vectorLayer.getSource();
+      vectorSource.addFeature(routeFeature);
+    })
+
+
+    /*
     const url = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=5b3ce3597851110001cf6248822f7a9d64924aa5bb3fb8ace99891d2&start=${start[0]},${start[1]}&end=${end[0]},${end[1]}`;
-
     this.httpClient.get(url).subscribe((response: any) => {
       const coordinates = response.features[0].geometry.coordinates;
       const routeCoords = coordinates.map((coord: any) => fromLonLat(coord));
 
       this.logDebug(`summary: ${JSON.stringify(response.features[0].properties.summary)}`)
-      
+
       this.clearVectorLayer("routeFeature");
 
       const routeStyle = new Style({
@@ -651,7 +894,7 @@ export class MapComponent implements AfterViewInit {
           color: '#1F80E7',
           width: 6
         })
-      });      
+      });
       const routeFeature: any = new Feature({
         geometry: new LineString(routeCoords),
         identifier: 'routeFeature'
@@ -664,15 +907,35 @@ export class MapComponent implements AfterViewInit {
       // Fit the map view to the route extent
       //this.map.getView().fit(routeFeature.getGeometry().getExtent());
     });
+    */
   }
 
 
-  addRoute() {
-    this.calculateRoute(this.routeFrom,this.routeTo);
+  private drawPoint(coordinates: any, options: pointOptions){
+    const pointGeometry = new Point(coordinates);
+    const pointFeature = new Feature({
+      geometry: pointGeometry,
+      identifier: options.name
+    });
 
-    this.routeFrom = undefined;
-    this.routeTo = undefined;
-}
+    const pointStyle = new Style({
+      image: new CircleStyle({
+        radius: 6,
+        fill: new Fill({ color: options.color }), // Set the fill color to blue
+        stroke: new Stroke({ color: 'white', width: 1 }) // Set the border color and width
+      })
+    });
+
+    pointFeature.setStyle(pointStyle);
+
+    const vectorSource = new VectorSource({
+      features: [pointFeature]
+    });
+    const vectorLayer = new VectorLayer({
+      source: vectorSource,
+    });
+    this.map.addLayer(vectorLayer);
+  }
 
   //#endregion privates
 
