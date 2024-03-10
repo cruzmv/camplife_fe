@@ -1,3 +1,4 @@
+//#region imports
 import { AfterViewInit, Component, ElementRef, HostListener, Inject, TemplateRef, ViewChild } from '@angular/core';
 import { parameters } from '../../config';
 import Map from 'ol/Map';
@@ -7,7 +8,6 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import { fromLonLat, transform } from 'ol/proj';
 import Point from 'ol/geom/Point';
-//import Feature from 'ol/Feature';
 import { Feature, Overlay } from 'ol';
 import Style from 'ol/style/Style';
 import Fill from 'ol/style/Fill';
@@ -23,7 +23,9 @@ import Text from 'ol/style/Text';
 import { NbWindowService } from '@nebular/theme';
 import LineString from 'ol/geom/LineString';
 import * as polyline from '@mapbox/polyline';
-
+import { v4 as uuidv4 } from 'uuid';
+import { Geolocation } from 'ol';
+//#endregion imports
 
 interface pointOptions {
   color: string,
@@ -36,10 +38,25 @@ interface pointOptions {
   styleUrl: './map.component.scss'
 })
 export class MapComponent implements AfterViewInit {
+
+  //#region declares
   @ViewChild('mapElement', { static: false }) mapElement!: ElementRef;
   @ViewChild('debugText') debugText!: ElementRef;
   @ViewChild('placeWindow', { read: TemplateRef }) placeWindow!: TemplateRef<HTMLElement>;
   @ViewChild('photoView') photoView!: ElementRef;
+  @ViewChild('roteFrom') roteFrom!: ElementRef;
+  @ViewChild('roteTo') roteTo!: ElementRef;
+  @ViewChild('driveMode') driveMode!: ElementRef;
+  @ViewChild('avoideToll') avoideToll!: ElementRef;
+  @ViewChild('avoideHighway') avoideHighway!: ElementRef;
+  @ViewChild('avoideFerrie') avoideFerrie!: ElementRef;
+  @ViewChild('vehicleType') vehicleType!: ElementRef;
+  @ViewChild('roteZoom') roteZoom!: ElementRef;
+  @ViewChild('memoryStatus') memoryStatus!: ElementRef;
+  @ViewChild('iconWiFi') iconWiFi!: ElementRef;
+  @ViewChild('iconGps') iconGps!: ElementRef;
+  @ViewChild('audioPlayer') audioPlayer!: ElementRef<HTMLAudioElement>;
+
   map: Map = new Map({
     controls: []
   });
@@ -60,6 +77,9 @@ export class MapComponent implements AfterViewInit {
   routeTo: any;
   apiEndPoint = 'http://cruzmv.ddns.net:3000/';
   watchGeoId: any;
+  myRote: any = {};
+  radioPlaying: boolean = false;
+  gpsStatus: boolean = true;
   location_icons = [
     { category: 'Fuel Station', src: 'assets/gas-pump.png' },
     { category: 'Showers', src: 'assets/shower.png' },
@@ -82,12 +102,15 @@ export class MapComponent implements AfterViewInit {
     { category: 'OFF-ROAD', src: 'assets/jeep.png' },
     { category: 'REST AREA', src: 'assets/restaurant.png' },
     { category: 'HOMESTAYS ACCOMMODATION', src: 'assets/homestay.png' },
+    { category: 'CRUISER', src: 'assets/dick.png' },
   ];
+  //#endregion declares
 
   constructor(private httpClient: HttpClient,
               @Inject(DOCUMENT) private document: any,
               private windowService: NbWindowService) { }
 
+  //#region publics
   @HostListener('window:offline', ['$event'])
   onOffline(event: any) {
     this.logDebug('You are offline!');
@@ -126,10 +149,54 @@ export class MapComponent implements AfterViewInit {
       this.logDebug('Device orientation not supported');
     }
 
+    setInterval( ()=>{
+      if (window.performance && (window.performance as any).memory) {
+        this.memoryStatus.nativeElement.innerHTML = `jsHeapSizeLimit: ${ (window.performance as any).memory.jsHeapSizeLimit.toLocaleString('en-US') } <br/>
+                                                     totalJSHeapSize: ${ (window.performance as any).memory.totalJSHeapSize.toLocaleString('en-US') } <br/>
+                                                     usedJSHeapSize: ${ (window.performance as any).memory.usedJSHeapSize.toLocaleString('en-US') }`
+        this.iconWiFi.nativeElement.src=`assets/${navigator.onLine ? 'wifi-outline' : 'wifi-off-outline'}.svg`;
+        this.iconGps.nativeElement.src=`assets/${this.gpsStatus ? 'compass-outline' : 'compass-off-outline'}.svg`;
+      }
+    }, 5000)
 
-    // Cache map tiles trying
-    //this.cacheMapTiles();
+    // Fetch the off line icons because when internet is off, it will not manage to fetch, so fetch it in advanced
+    fetch('assets/wifi-off-outline.svg');
 
+    // Request screen aways awake
+    navigator.wakeLock.request('screen').then(result =>{
+      this.logDebug(`wakeLock ${result.released}`);
+    })
+
+
+    // Get the Geolocation API
+    const geolocation = new Geolocation({
+      trackingOptions: {
+        enableHighAccuracy: true // Enable high accuracy tracking
+      },
+      projection: this.map.getView().getProjection() // Use map projection
+    });
+
+    // Continuously update the map rotation based on device heading
+    geolocation.on('change', () => {
+      const heading = geolocation.getHeading(); // Get device heading
+      if (heading !== undefined) {
+        const rotation = (360 - heading) * Math.PI / 180; // Convert heading to radians
+        this.map.getView().setRotation(rotation); // Set map rotation
+      }
+    });
+
+    // Start tracking the device's position
+    geolocation.setTracking(true);
+
+  }
+
+  playRadio(){
+    this.radioPlaying = !this.radioPlaying;
+    if (this.radioPlaying) {
+      this.audioPlayer.nativeElement.play();
+    } else {
+      this.audioPlayer.nativeElement.pause();
+    }
   }
 
   toggleFullScreenMap() {
@@ -187,19 +254,54 @@ export class MapComponent implements AfterViewInit {
     } else {
       this.stopWatchingPosition();
     }
-    // this.trackingStatus = !this.trackingStatus;
-    // if (this.trackingStatus){
-    //   this.intervalId = setInterval(() => {
-    //     this.centerToCurrentPosition();
-    //   }, 1000);
-    //   this.centerToCurrentPosition();
-    // } else {
-    //   clearInterval(this.intervalId)
-    // }
   }
 
   windowDebug(){
     this.debugWindow = !this.debugWindow;
+  }
+
+  fetchCruiser(latFromPar: any = undefined,longFromPar: any = undefined){
+    let centerCoordinates: any[] = [];
+    if (latFromPar != undefined && longFromPar != undefined ){
+      centerCoordinates[0] = latFromPar;
+      centerCoordinates[1] = longFromPar;
+    } else {
+      centerCoordinates = this.map.getView().getCenter() as any;
+    }
+    const [long, lat] = this.bing2GooglePosition(centerCoordinates[0], centerCoordinates[1]);
+    this.logDebug(`Cruiser at coordinates: ${JSON.stringify([long, lat])}`);
+
+    const apiUrl = `${this.apiEndPoint}get_cruiser_list`;
+    const queryParams = { lat: lat.toString(), long: long.toString() };
+
+    this.httpClient.get(apiUrl, { params: queryParams }).subscribe((response: any) => {
+
+      response.data.forEach((place:any) => {
+        this.places.push({
+          place_category: "CRUISER",
+          place_distance_km: place.place_distance_km,
+          place_id: uuidv4(),
+          place_latitude: place.latitude,
+          place_longitude: place.longitude,
+          place_name: `${place.title_place} ${place.place_place}`,
+          place_resume: place.description_place,
+          is_center: place.is_center,
+          parking_price: "CRUISER",
+          service_price: "",
+          place_link: place.more_place
+        })
+      });
+
+      localStorage.setItem("places",JSON.stringify(this.places));
+      this.logDebug(`${response.data.length} fetched, total: ${response.data.length}`);
+      this.addMarkers();
+    },
+      (error) => {
+        this.logDebug(`Error fetching cruiser places: ${JSON.stringify(error)}`);
+      }
+    );
+
+
   }
 
   fetchPlaces(latFromPar: any = undefined,longFromPar: any = undefined){
@@ -211,7 +313,7 @@ export class MapComponent implements AfterViewInit {
       centerCoordinates = this.map.getView().getCenter() as any;
     }
     const [long, lat] = this.bing2GooglePosition(centerCoordinates[0], centerCoordinates[1]);
-    this.logDebug(`Google coordinates: ${JSON.stringify([long, lat])}`);
+    this.logDebug(`Places at coordinates: ${JSON.stringify([long, lat])}`);
 
     const apiUrl = `${this.apiEndPoint}get_place_list`;
     const queryParams = { lat: lat.toString(), long: long.toString() };
@@ -277,9 +379,102 @@ export class MapComponent implements AfterViewInit {
     this.cleanMap();
   }
 
+  startDrive() {
+    this.routeToolbar = !this.routeToolbar;
+    this.map.getView().setZoom(this.roteZoom.nativeElement.value);
+    this.updateTrackingStatus();
+  }
+
+  cacheRote(){
+
+    if (this.selectedLayer !== 'Google'){
+      alert('Only Google');
+      return;
+    }
+
+    // Define the bounding box coordinates
+    const boundingBox = this.myRote.rote.bbox;
+
+    // Define the zoom level
+    const zoomLevel = Math.round(this.roteZoom.nativeElement.value);
+
+    // Define the number of steps to divide the bounding box
+    const numSteps = 10; // You can adjust this value according to your requirements
+
+    // Calculate latitude and longitude step increments
+    const latStep = (boundingBox[3] - boundingBox[1]) / numSteps;
+    const lngStep = (boundingBox[2] - boundingBox[0]) / numSteps;
+    const latlong: any = [];
+
+    // Iterate through the bounding box and calculate coordinates
+    for (let lat = boundingBox[1]; lat <= boundingBox[3]; lat += latStep) {
+      for (let lng = boundingBox[0]; lng <= boundingBox[2]; lng += lngStep) {
+        const tileUrl = this.getMapTile(lat, lng, zoomLevel);
+        console.log(tileUrl);
+        fetch(tileUrl);
+      }
+    }
+  }
+
+  async drawRote() {
+    const geoFrom: [number,number] = this.roteFrom.nativeElement.value.split(',').map(Number);
+    const geoTo: [number,number] = this.roteTo.nativeElement.value.split(',').map(Number);
+    const driveMode = this.driveMode.nativeElement.value;
+    const avoideToll = this.avoideToll.nativeElement.checked;
+    const avoideHighway = this.avoideHighway.nativeElement.checked;
+    const avoideFerrie = this.avoideFerrie.nativeElement.checked;
+    const vehicleType = this.vehicleType.nativeElement.value;
+    const roteZoom = this.roteZoom.nativeElement.value;
+
+    this.drawRoteOption([geoFrom,geoTo], driveMode, {toll: avoideToll, highway: avoideHighway, ferrie: avoideFerrie},vehicleType, roteZoom);
+
+  }
+
   async addRoute() {
 
     this.routeToolbar = !this.routeToolbar;
+    const from_geometry: any = await this.locateFeature("dotFeature");
+    const from_coordinates = from_geometry.getCoordinates();
+    const from_coordinates_google: any = this.bing2GooglePosition(from_coordinates[0],from_coordinates[1]);
+
+    const to_geometry: any = await this.locateFeature("pinpoint");
+    const to_coordinates = to_geometry.getCoordinates();
+    const to_coordinates_google: any = this.bing2GooglePosition(to_coordinates[0],to_coordinates[1]);
+
+    setTimeout(() => {
+
+      this.roteFrom.nativeElement.value = from_coordinates_google;
+      this.roteTo.nativeElement.value = to_coordinates_google;
+
+    }, 500);
+
+
+    this.calculateRoute(from_coordinates_google,to_coordinates_google);
+
+    this.routeFrom = undefined;
+    this.routeTo = undefined;
+
+
+
+
+    // const from_geometry: any = await this.locateFeature("dotFeature");
+    // const from_coordinates = from_geometry.getCoordinates();
+    // const from_coordinates_google: any = this.bing2GooglePosition(from_coordinates[0],from_coordinates[1]);
+
+    //await this.cacheMapTiles(from_coordinates_google[0], from_coordinates_google[1], 0.02);
+    //this.cacheMapTiles(from_coordinates_google[0], from_coordinates_google[1], 16);
+//    this.cacheMapTiles(48.858, 2.295, 12);
+    //this.cacheMapTiles(40.131376696001155 , -7.503030225953948, 16);
+
+    // const tileUrl = this.getMapTile(from_coordinates_google[1],from_coordinates_google[0], this.mapZoon);
+    // console.log(tileUrl);
+
+    // const browser = await puppeteer.launch();
+    // const page = await browser.newPage();
+    // await page.goto('https://www.gays-cruising.com/en/portugal');
+    // await page.waitForFunction('typeof gcMaps !== "undefined"');
+    // const latlng = await page.evaluate(`gcMaps.parametros.markers[0][4]._latlng`);
+
 
     /*
     const from_geometry: any = await this.locateFeature("dotFeature");
@@ -290,7 +485,7 @@ export class MapComponent implements AfterViewInit {
     const to_coordinates = to_geometry.getCoordinates();
     const to_coordinates_google: any = this.bing2GooglePosition(to_coordinates[0],to_coordinates[1]);
 
-    
+
     this.calculateRoute(from_coordinates_google,to_coordinates_google);
     //this.calculateRoute(this.routeFrom,this.routeTo);
 
@@ -298,6 +493,8 @@ export class MapComponent implements AfterViewInit {
     this.routeTo = undefined;
     */
   }
+  //#endregion publics
+
 
   //#region privates
   private initializeMap(): void {
@@ -324,33 +521,28 @@ export class MapComponent implements AfterViewInit {
       }
     });
 
-    /*   Caching trying
-    viewr.on('change:center', () => {
-      const newCenter = viewr.getCenter();
-      const extent = this.map.getView().calculateExtent(this.map.getSize());
-      const newBbox = [
-          extent[0], // minx
-          extent[1], // miny
-          extent[2], // maxx
-          extent[3]  // maxy
-      ];
-      this.handleMapMovement(newBbox);
-    });
+    setTimeout(() => {
+      const options = {
+        enableHighAccuracy: true,
+        timeout: 1000,  // Timeout in milliseconds
+        maximumAge: 0   // No maximum age for cached positions
+      };
 
-    viewr.on('change:resolution', () => {
-      const extent = this.map.getView().calculateExtent(this.map.getSize());
-      const newBbox = [
-          extent[0], // minx
-          extent[1], // miny
-          extent[2], // maxx
-          extent[3]  // maxy
-      ];
-      this.handleMapMovement(newBbox);
-    });
-    */
-
-    this.trackingStatus = true;
-    this.updateTrackingStatus();
+      const watchGeoId = navigator.geolocation.watchPosition(
+        (position) => {
+          const coordinates: any = [position.coords.longitude, position.coords.latitude];
+          this.recordGeoPosition(coordinates);
+          this.centerAndZoomToLocation(coordinates); // Change zoom level as needed
+          navigator.geolocation.clearWatch(watchGeoId);
+          this.gpsStatus = true;
+        },
+        (error) => {
+          this.logDebug(`GetPosition Error: ${JSON.stringify(error)}`);
+          this.gpsStatus = false;
+        },
+        options
+      );
+    }, 1000);
 
     // Create and add an overlay to the map for displaying tooltips
     this.tooltipOverlay = new Overlay({
@@ -433,7 +625,13 @@ export class MapComponent implements AfterViewInit {
       // this.logDebug(`google: ${JSON.stringify(this.bing2GooglePosition(coordinates[0],coordinates[1]))}`);
       // this.logDebug(`coords: ${transform(coordinates, 'EPSG:3857', 'EPSG:4326')}`)
       const coordinates: any = this.bing2GooglePosition(event.coordinate[0],event.coordinate[1]);
-      this.logDebug(`coords: ${ coordinates  }`);
+      if (this.roteTo !== undefined){
+        this.roteTo.nativeElement.value = coordinates;
+      }
+
+      this.logDebug(`bing: ${ event.coordinate  }`);
+      this.logDebug(`google: ${ coordinates  }`);
+
 
       if (this.routeFrom == undefined){
         this.routeFrom = coordinates
@@ -443,31 +641,8 @@ export class MapComponent implements AfterViewInit {
       }
 
     });
+
   }
-
-  // private centerToCurrentPosition() {
-  //   if ('geolocation' in navigator) {
-  //     const options = {
-  //       enableHighAccuracy: true,
-  //       timeout: 1000,  // Timeout in milliseconds
-  //       maximumAge: 0   // No maximum age for cached positions
-  //     };
-
-  //     navigator.geolocation.getCurrentPosition(
-  //       (position) => {
-  //         const coordinates: any = [position.coords.longitude, position.coords.latitude];
-  //         this.recordGeoPosition(coordinates);
-  //         this.centerAndZoomToLocation(coordinates); // Change zoom level as needed
-  //       },
-  //       (error) => {
-  //         this.logDebug(`GetPosition Error: ${JSON.stringify(error)}`);
-  //       },
-  //       options
-  //     );
-  //   } else {
-  //     this.logDebug('Geolocation is not supported in this browser.');
-  //   }
-  // }
 
   private startWatchingPosition() {
     if ('geolocation' in navigator) {
@@ -482,9 +657,11 @@ export class MapComponent implements AfterViewInit {
           const coordinates: any = [position.coords.longitude, position.coords.latitude];
           this.recordGeoPosition(coordinates);
           this.centerAndZoomToLocation(coordinates); // Change zoom level as needed
+          this.gpsStatus = true;
         },
         (error) => {
           this.logDebug(`GetPosition Error: ${JSON.stringify(error)}`);
+          this.gpsStatus = false;
         },
         options
       );
@@ -516,7 +693,7 @@ export class MapComponent implements AfterViewInit {
 
     this.logDebug(JSON.stringify(geoData));
     this.httpClient.post(`${this.apiEndPoint}log_geo`, geoData).subscribe((response: any) => {
-      this.logDebug(JSON.stringify(response));
+      //this.logDebug(JSON.stringify(response));
     },error => {
       this.logDebug(JSON.stringify(error));
     });
@@ -577,7 +754,7 @@ export class MapComponent implements AfterViewInit {
           const features = source.getFeatures();
           await features.forEach(feature => {
             if (name == undefined || feature.get("identifier") === name) {
-                geometry = feature.getGeometry();        
+                geometry = feature.getGeometry();
             }
           });
         }
@@ -684,7 +861,7 @@ export class MapComponent implements AfterViewInit {
               scale: 1.5, // Adjust the scale to make the icon larger
             }),
             text: new Text({
-              text: `${place.parking_price}|${place.service_price}`,
+              text: `${place.parking_price ? place.parking_price : ''}|${place.service_price ? place.service_price: ''}${place.parking_price || place.service_price ? '' : place.place_name }`,
               font: 'bold 12px Arial',
               offsetY: 5,
               fill: new Fill({color: 'rgb(0,0,0)'}),
@@ -732,97 +909,19 @@ export class MapComponent implements AfterViewInit {
     });
   }
 
+  private getMapTile(latitude: number, longitude: number, zoom: number) {
+    const baseUrl = this.googleStyleMap;   //'http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}';
+    const z = Math.round(zoom);
+    const lon2tile = (lon:any,zoom:any) => (Math.floor((lon+180)/360*Math.pow(2,zoom)));
+    const lat2tile = (lat:any,zoom:any) => (Math.floor((1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2 *Math.pow(2,zoom)));
+    let x = lon2tile(longitude, z),
+        y = lat2tile(latitude, z);
 
-/* Cache trying
-  private async cacheMapTiles() {
-    const bbox = [-180, -90, 180, 90]; // Define the bounding box for caching tiles
-    const tileUrls = this.generateTileUrls(bbox);
-
-    for (const url of tileUrls) {
-        try {
-            const blob = await this.fetchAndCacheTile(url);
-            console.log('Tile cached successfully:', url);
-        } catch (error) {
-            console.error('Error caching tile:', url, error);
-        }
-    }
+    return baseUrl.replace('{z}', z.toString())
+                  .replace('{x}', x.toString())
+                  .replace('{y}', y.toString())
   }
 
-  private generateTileUrls(bbox: number[]): string[] {
-    // Generate tile URLs based on the bounding box
-    // Adjust according to the tile service you are using
-    const tileUrls: string[] = [];
-    const baseUrl = 'http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}';
-    //const baseUrl = 'http://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}';
-    //http://mt0.google.com/vt/lyrs=y&hl=en&x=3925&y=3096&z=13
-    //https://t0.ssl.ak.dynamic.tiles.virtualearth.net/comp/ch/0?mkt=en-US&it=A,G,L&og=2431&n=z
-    //http://mt0.google.com/vt/lyrs=m&hl=en&x=244&y=193&z=9
-
-    const minZoom = 0; // Minimum zoom level
-    const maxZoom = 4; // Maximum zoom level
-
-    // Iterate over the specified range of zoom levels and tile coordinates
-    for (let z = minZoom; z <= maxZoom; z++) {
-        const maxTileCoord = Math.pow(2, z);
-        for (let x = 0; x < maxTileCoord; x++) {
-            for (let y = 0; y < maxTileCoord; y++) {
-                const url = baseUrl
-                    .replace('{z}', z.toString())
-                    .replace('{x}', x.toString())
-                    .replace('{y}', y.toString());
-                tileUrls.push(url);
-            }
-        }
-    }
-
-    return tileUrls;
-  }
-
-  private async fetchAndCacheTile(url: string): Promise<Blob> {
-    // Check if the tile is already cached in sessionStorage
-    const cachedTileBase64 = sessionStorage.getItem(url);
-    if (cachedTileBase64) {
-        // Convert the base64 string back to a Blob
-        const byteCharacters = atob(cachedTileBase64.split(',')[1]);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray]);
-        return blob;
-    }
-
-    // Fetch the tile if not cached and cache it
-    const response = await fetch(url);
-    const blob = await response.blob();
-    // Cache the tile in sessionStorage
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        const base64Data = event.target?.result as string;
-        sessionStorage.setItem(url, base64Data); // Store the base64 string in sessionStorage
-    };
-    reader.readAsDataURL(blob);
-
-    return blob;
-  }
-
-  // Assume you have a function to handle map movements
-  // This function is called whenever the map is moved to a new location
-  private async handleMapMovement(newBbox: number[]): Promise<void> {
-    const tileUrls = this.generateTileUrls(newBbox);
-
-    for (const url of tileUrls) {
-        try {
-            // Check if the tile is already cached
-            const cachedTile = await this.fetchAndCacheTile(url);
-            console.log('Tile fetched and cached successfully:', url);
-        } catch (error) {
-            console.error('Error caching tile:', url, error);
-        }
-    }
-  }
-*/
 
   private handleOrientation(event: DeviceOrientationEvent) {
     if (event.alpha !== null) {
@@ -837,6 +936,67 @@ export class MapComponent implements AfterViewInit {
     } else {
       this.logDebug(`no event.alpha`);
     }
+  }
+
+  private drawRoteOption(geoRote: [[number,number],[number,number]], driveMode: string, avoide: any,vehicleType: string, roteZoom: string) {
+
+    const postUrl = `https://api.openrouteservice.org/v2/directions/${driveMode}`;
+    const header = {
+      Authorization: "5b3ce3597851110001cf6248822f7a9d64924aa5bb3fb8ace99891d2"
+    };
+
+    const avoidFeatures = []
+    if (avoide.toll)
+      avoidFeatures.push("tollways");
+    if (avoide.highway)
+      avoidFeatures.push("highways");
+    if (avoide.ferrie)
+      avoidFeatures.push("ferries");
+
+    const options: any = {
+      "avoid_features": avoidFeatures,
+    }
+    if (vehicleType !== 'unknown'){
+      options.vehicle_type = vehicleType
+    }
+
+    const body = {
+      "coordinates":[
+        geoRote[0],
+        geoRote[1]
+      ],
+      "options": options
+    }
+
+    this.myRote.from = geoRote[0];
+    this.myRote.to = geoRote[1];
+    this.myRote.vehicleYype = vehicleType;
+    this.myRote.driveMode = driveMode;
+    this.myRote.avoidFeatures = avoidFeatures;
+
+    this.httpClient.post(postUrl, body, {headers: header} ).subscribe((response: any)=>{
+      this.myRote.rote = response;
+      const polylineString = response.routes[0].geometry;
+      const routeCoordinates = polyline.decode(polylineString).map(coords => [coords[1], coords[0]]);
+      const routeFeature: any = new Feature({
+        geometry: new LineString(routeCoordinates).transform('EPSG:4326', 'EPSG:3857'),
+        identifier: 'routeFeature'
+      });
+      const routeStyle = new Style({
+        stroke: new Stroke({
+          color: '#1F80E7',
+          width: 6
+        })
+      });
+      this.clearVectorLayer("routeFeature");
+      routeFeature.setStyle(routeStyle);
+
+      const vectorLayer = this.map.getLayers().getArray().find((layer) => layer instanceof VectorLayer) as VectorLayer<VectorSource>;
+      const vectorSource: any = vectorLayer.getSource();
+      vectorSource.addFeature(routeFeature);
+    }, (error: any) => {
+      this.logDebug(error.error.error.message);
+    })
   }
 
   private calculateRoute(start: [number, number], end: [number, number]) {
@@ -856,8 +1016,11 @@ export class MapComponent implements AfterViewInit {
         ]
       }
     }
+
+
+
     this.httpClient.post(postUrl, body, {headers: header} ).subscribe((response: any)=>{
-      
+
       const polylineString = response.routes[0].geometry;
       const routeCoordinates = polyline.decode(polylineString).map(coords => [coords[1], coords[0]]);
       const routeFeature: any = new Feature({
@@ -877,6 +1040,9 @@ export class MapComponent implements AfterViewInit {
       const vectorSource: any = vectorLayer.getSource();
       vectorSource.addFeature(routeFeature);
     })
+
+
+
 
 
     /*
@@ -909,7 +1075,6 @@ export class MapComponent implements AfterViewInit {
     });
     */
   }
-
 
   private drawPoint(coordinates: any, options: pointOptions){
     const pointGeometry = new Point(coordinates);

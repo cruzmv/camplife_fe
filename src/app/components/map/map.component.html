@@ -1,63 +1,20 @@
 <div class="map-container">
-    
-    
-    
-<!--
-    <div class="toolbar">
-        <div class="section">
 
-            <select (change)="mapSelect($event)" id="mapselect">
-                <option>Google</option>
-                <option>Bing</option>
-                <option>OSM</option>
-            </select>
-
-            <select *ngIf="selectedLayer == 'Bing'" 
-                    (change)="mapSelect($event)" 
-                    [value]="bingStyleMap"
-                    id="bingselect">
-                <option>RoadOnDemand</option>
-                <option>Aerial</option>
-                <option>AerialWithLabelsOnDemand</option>
-                <option>CanvasDark</option>
-                <option>OrdnanceSurvey</option>
-            </select>
-
-            <select *ngIf="selectedLayer == 'Google'"
-                    (change)="mapSelect($event)" 
-                    id="googleselect">
-                <option>Hybrid</option>
-                <option>Roadmap</option>
-                <option>Terrain</option>
-                <option>Altered roadmap</option>
-                <option>Satellite only</option>
-                <option>Terrain only</option>
-            </select>
-
-
-            <button (click)="updateTrackingStatus()">{{ trackingStatus ? 'Stop Tracking' : 'Start Tracking' }}</button>
+    <div class="top-info">
+        <div class="memory-info">
+            <label #memoryStatus></label>
+        </div>
+        <div class="status">
+            <img #iconWiFi src="assets/wifi-off-outline.svg" width="10%">
+            <img #iconGps src="assets/compass-outline.svg" width="10%">
         </div>
 
-        <div class="section center">
-            <button (click)="fetchPlaces()">Fetch</button>
-            <button (click)="updatePlaces()">Update</button>
-            <button (click)="addRoute()">Rote</button>
-            <button (click)="cleanMap()">CleanMap</button>
-            <button (click)="cleanCache()">cleanCache</button>
-        </div>
-
-        <div class="section">
-            <button (click)="windowDebug()">Debug [{{debugWindow?'ON':'OFF'}}]</button>
-            <button (click)="toggleFullScreenMap()">[[ ]]</button>
-        </div>
     </div>
--->
-
 
     <div class="right-toolbar">
 
         <div class="toolbar-top">
-            <select (change)="mapSelect($event)" id="mapselect">
+            <select (change)="mapSelect($event)" id="mapselect" style="font-weight: bolder;">
                 <option>Google</option>
                 <option>Bing</option>
                 <option>OSM</option>
@@ -65,7 +22,8 @@
             <select *ngIf="selectedLayer == 'Bing'" 
                     (change)="mapSelect($event)" 
                     [value]="bingStyleMap"
-                    id="bingselect">
+                    id="bingselect"
+                    style="font-weight: bolder;">
                 <option>RoadOnDemand</option>
                 <option>Aerial</option>
                 <option>AerialWithLabelsOnDemand</option>
@@ -74,7 +32,8 @@
             </select>
             <select *ngIf="selectedLayer == 'Google'"
                     (change)="mapSelect($event)" 
-                    id="googleselect">
+                    id="googleselect"
+                    style="font-weight: bolder;">
                 <option>Hybrid</option>
                 <option>Roadmap</option>
                 <option>Terrain</option>
@@ -82,29 +41,77 @@
                 <option>Satellite only</option>
                 <option>Terrain only</option>
             </select>
-            <button (click)="updateTrackingStatus()">{{ trackingStatus ? 'Stop Tracking' : 'Start Tracking' }}</button>
+            <button (click)="updateTrackingStatus()" style="font-weight: bolder;">Tracking [{{ trackingStatus ? 'ON' : 'OFF' }}]</button>
         </div>
 
         <div class="toolbar-center">
-            <button (click)="fetchPlaces()">Fetch</button>
-            <button (click)="updatePlaces()">Update</button>
-            <button (click)="addRoute()">Rote</button>
-            <button (click)="cleanMap()">CleanMap</button>
-            <button (click)="cleanCache()">cleanCache</button>
+            <button (click)="fetchPlaces()" style="font-weight: bolder;">Get Camping Here</button>
+            <button (click)="fetchCruiser()" style="font-weight: bolder;">Get Cruiser Here</button>
+            <button (click)="updatePlaces()" style="font-weight: bolder;">Update Camping Here</button>
+            <button (click)="addRoute()" style="font-weight: bolder;">Rote</button>
+            <button (click)="cleanMap()" style="font-weight: bolder;">Clean the Map</button>
+            <button (click)="cleanCache()" style="font-weight: bolder;">Clean the Cache</button>
+            <button (click)="playRadio()" style="font-weight: bolder;">Radio [{{radioPlaying ? 'ON' : 'OFF'}}]</button>
         </div>
 
         <div class="toolbar-bottom">
-            <button (click)="windowDebug()">Debug [{{debugWindow?'ON':'OFF'}}]</button>
-            <button (click)="toggleFullScreenMap()">[[ ]]</button>
+            <button (click)="windowDebug()" style="font-weight: bolder;">Debug [{{debugWindow?'ON':'OFF'}}]</button>
+            <button (click)="toggleFullScreenMap()" style="font-weight: bolder;">[[ ]]</button>
         </div>
     </div>
 
     <div *ngIf="routeToolbar" class="route-toolbar">
+        <input #roteFrom type="text" nbInput fullWidth status="basic" placeholder="From">
+        <input #roteTo type="text" nbInput fullWidth status="basic" placeholder="To">
+
+        <!-- Path Parameter -> profile * -->
+        <select #driveMode style="font-weight: bolder; width: 100%">
+            <option>driving-car</option>
+            <option>driving-hgv</option>
+            <option>cycling-regular</option>
+            <option>cycling-road</option>
+            <option>cycling-mountain</option>
+            <option>cycling-electric</option>
+            <option>foot-walk</option>
+            <option>foot-hiking</option>
+            <option>wheel-chair</option>
+        </select>
+
+        <!-- options-> avoid_features -->
+        <label>Avoid</label>
+        <div>
+            <input #avoideToll type="checkbox" id="toll" name="avoideToll">
+            <label for="avoideToll">TollCross</label>
+
+            <input #avoideHighway type="checkbox" id="highways" name="avoideHighways">
+            <label for="avoideHighways">Highways</label>
+
+            <input #avoideFerrie type="checkbox" id="ferrie" name="avoideFerrie">
+            <label for="avoideFerrie">Ferries</label>
+        </div>
+
+        <!-- options -> vehicle_type -->
+        <select #vehicleType style="font-weight: bolder; width: 100%">
+            <option>unknown</option>
+            <option>hgv</option>
+            <option>bus</option>
+            <option>agricultural</option>
+            <option>delivery</option>
+            <option>forestry</option>
+            <option>goods</option>
+        </select>
+
+        <label for="roteZoom">Zoom</label>
+        <input #roteZoom type="text" value="19" id="roteZoom">
+
+        <button nbButton status="basic" (click)="drawRote()">Rote</button>
+        <button *ngIf="this.selectedLayer == 'Google'" nbButton status="basic" (click)="cacheRote()">Cache Rote</button>
+        <button nbButton status="basic" (click)="startDrive()">Start Drive</button>
 
     </div>
 
-
     <div #mapElement class="map"></div>
+    
 </div>
 
 <div *ngIf="debugWindow" class="debug">
@@ -190,6 +197,7 @@
                         <span class="caption-2 text-hint">[{{place.place_latitude}},{{place.place_longitude}}] - {{ place.place_address }}</span>
                     </a>
                 </p>
+                <a href="{{place.place_link}}" target="_blank">MORE</a>
                 <hr>
                 <ng-container *ngIf="place.photos && place.photos.length > 0">
                     <div class="photo-container">
@@ -217,4 +225,10 @@
     </div>    
 </div>
 
-
+<div>
+    <audio controls #audioPlayer>
+      <source src="https://listen-pureradio.sharp-stream.com/pure_radio.mp3?Device=LivePlayer&_=532281&awparams=companionAds%3Atrue&listenerid=8196d2c78a734f244852a3f8bbbecbcb" type="audio/mpeg">
+      Your browser does not support the audio element.
+    </audio>
+</div>
+  

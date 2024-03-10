@@ -4,7 +4,7 @@ import { BrowserModule, provideClientHydration } from '@angular/platform-browser
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 
-import { NbThemeModule, NbSidebarModule, NbLayoutModule, NbButtonModule, NbMenuModule, NbIconModule, NbCardModule, NbSpinnerModule, NbWindowModule } from '@nebular/theme';
+import { NbThemeModule, NbSidebarModule, NbLayoutModule, NbButtonModule, NbMenuModule, NbIconModule, NbCardModule, NbSpinnerModule, NbWindowModule, NbInputModule, NbSelectModule } from '@nebular/theme';
 import { NbEvaIconsModule } from '@nebular/eva-icons';
 //import { MapsComponent } from './maps/maps.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
@@ -36,7 +36,9 @@ import { MapComponent } from './components/map/map.component';
     NbEvaIconsModule,
     NbCardModule,
     NbSpinnerModule,
-    NbWindowModule.forRoot({})
+    NbWindowModule.forRoot({}),
+    NbInputModule,
+    NbSelectModule
   ],
   providers: [
     provideClientHydration()

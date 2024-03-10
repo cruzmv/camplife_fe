@@ -48,3 +48,14 @@ Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To u
 ## Further help
 
 To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+
+
+
+
+
+radio api:
+https://de1.api.radio-browser.info/json/stations/search?name=pure&countrycode=GB
+pure Radio:
+https://listen-pureradio.sharp-stream.com/pure_radio.mp3?Device=LivePlayer&_=532281&awparams=companionAds%3Atrue&listenerid=8196d2c78a734f244852a3f8bbbecbcb
+
+
