@@ -1,5 +1,5 @@
 //#region imports
-import { AfterViewInit, Component, ElementRef, HostListener, Inject, TemplateRef, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, Inject, TemplateRef, ViewChild } from '@angular/core';
 import { parameters } from '../../config';
 import Map from 'ol/Map';
 import View from 'ol/View';
@@ -56,7 +56,11 @@ export class MapComponent implements AfterViewInit {
   @ViewChild('iconWiFi') iconWiFi!: ElementRef;
   @ViewChild('iconGps') iconGps!: ElementRef;
   @ViewChild('audioPlayer') audioPlayer!: ElementRef<HTMLAudioElement>;
-
+  @ViewChild('btnTrack') btnTrack!: ElementRef;
+  @ViewChild('btnRadio') btnRadio!: ElementRef;
+  @ViewChild('btnDebug') btnDebug!: ElementRef;
+  @ViewChild('btnRote') btnRote!: ElementRef;
+  
   map: Map = new Map({
     controls: []
   });
@@ -68,18 +72,18 @@ export class MapComponent implements AfterViewInit {
   gpsData: any = [];
   trackingStatus: boolean = false;
   intervalId: any;
-  debugWindow: boolean = true;
+  debugWindow: boolean = false;
   routeToolbar: boolean = false;
   places: any[] = [];
   place: any;
   tooltipOverlay!: Overlay;
-  routeFrom: any;
-  routeTo: any;
   apiEndPoint = 'http://cruzmv.ddns.net:3000/';
   watchGeoId: any;
   myRote: any = {};
   radioPlaying: boolean = false;
   gpsStatus: boolean = true;
+  geolocation: any;
+  dateTimeDisplay: string = '';
   location_icons = [
     { category: 'Fuel Station', src: 'assets/gas-pump.png' },
     { category: 'Showers', src: 'assets/shower.png' },
@@ -108,7 +112,8 @@ export class MapComponent implements AfterViewInit {
 
   constructor(private httpClient: HttpClient,
               @Inject(DOCUMENT) private document: any,
-              private windowService: NbWindowService) { }
+              private windowService: NbWindowService,
+              private cdr: ChangeDetectorRef) { }
 
   //#region publics
   @HostListener('window:offline', ['$event'])
@@ -124,7 +129,6 @@ export class MapComponent implements AfterViewInit {
   ngAfterViewInit(): void {
     this.photoView.nativeElement.hidden = true;
     this.initializeMap();
-    //this.centerToCurrentPosition();
 
     const places = localStorage.getItem('places');
     if (places != null){
@@ -142,12 +146,12 @@ export class MapComponent implements AfterViewInit {
     }
     this.mapSelect(event);
 
-    if (window.DeviceOrientationEvent) {
-      window.addEventListener('deviceorientation', this.handleOrientation.bind(this), true);
-      this.logDebug(`window.DeviceOrientationEvent exists`);
-    } else {
-      this.logDebug('Device orientation not supported');
-    }
+    // if (window.DeviceOrientationEvent) {
+    //   window.addEventListener('deviceorientation', this.handleOrientation.bind(this), true);
+    //   this.logDebug(`window.DeviceOrientationEvent exists`);
+    // } else {
+    //   this.logDebug('Device orientation not supported');
+    // }
 
     setInterval( ()=>{
       if (window.performance && (window.performance as any).memory) {
@@ -157,7 +161,10 @@ export class MapComponent implements AfterViewInit {
         this.iconWiFi.nativeElement.src=`assets/${navigator.onLine ? 'wifi-outline' : 'wifi-off-outline'}.svg`;
         this.iconGps.nativeElement.src=`assets/${this.gpsStatus ? 'compass-outline' : 'compass-off-outline'}.svg`;
       }
-    }, 5000)
+      const now = new Date()
+      this.dateTimeDisplay = `${now.toDateString()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+      this.cdr.detectChanges();
+    }, 1000)
 
     // Fetch the off line icons because when internet is off, it will not manage to fetch, so fetch it in advanced
     fetch('assets/wifi-off-outline.svg');
@@ -169,7 +176,7 @@ export class MapComponent implements AfterViewInit {
 
 
     // Get the Geolocation API
-    const geolocation = new Geolocation({
+    this.geolocation = new Geolocation({
       trackingOptions: {
         enableHighAccuracy: true // Enable high accuracy tracking
       },
@@ -177,8 +184,8 @@ export class MapComponent implements AfterViewInit {
     });
 
     // Continuously update the map rotation based on device heading
-    geolocation.on('change', () => {
-      const heading = geolocation.getHeading(); // Get device heading
+    this.geolocation.on('change', () => {
+      const heading = this.geolocation.getHeading(); // Get device heading
       if (heading !== undefined) {
         const rotation = (360 - heading) * Math.PI / 180; // Convert heading to radians
         this.map.getView().setRotation(rotation); // Set map rotation
@@ -186,7 +193,13 @@ export class MapComponent implements AfterViewInit {
     });
 
     // Start tracking the device's position
-    geolocation.setTracking(true);
+    //this.geolocation.setTracking(true);
+
+
+    this.btnTrack.nativeElement.style.backgroundColor = this.trackingStatus ? '#a8f29b' : '#e38178';
+    this.btnRadio.nativeElement.style.backgroundColor = this.radioPlaying ? '#a8f29b' : '#e38178';
+    this.btnDebug.nativeElement.style.backgroundColor = this.debugWindow ? '#a8f29b' : '#e38178';
+    this.btnRote.nativeElement.style.backgroundColor = this.routeToolbar ? '#a8f29b' : '#e38178';
 
   }
 
@@ -197,6 +210,7 @@ export class MapComponent implements AfterViewInit {
     } else {
       this.audioPlayer.nativeElement.pause();
     }
+    this.btnRadio.nativeElement.style.backgroundColor = this.radioPlaying ? '#a8f29b' : '#e38178';
   }
 
   toggleFullScreenMap() {
@@ -251,13 +265,19 @@ export class MapComponent implements AfterViewInit {
     this.trackingStatus = !this.trackingStatus;
     if (this.trackingStatus){
       this.startWatchingPosition();
+      this.geolocation.setTracking(true);
     } else {
       this.stopWatchingPosition();
+      this.geolocation.setTracking(false);
     }
+
+    this.btnTrack.nativeElement.style.backgroundColor = this.trackingStatus ? '#a8f29b' : '#e38178';
+
   }
 
   windowDebug(){
     this.debugWindow = !this.debugWindow;
+    this.btnDebug.nativeElement.style.backgroundColor = this.debugWindow ? '#a8f29b' : '#e38178';
   }
 
   fetchCruiser(latFromPar: any = undefined,longFromPar: any = undefined){
@@ -387,8 +407,8 @@ export class MapComponent implements AfterViewInit {
 
   cacheRote(){
 
-    if (this.selectedLayer !== 'Google'){
-      alert('Only Google');
+    if (this.selectedLayer == 'Bing'){
+      alert('Feature not avalible for Bing. Yet.');
       return;
     }
 
@@ -433,65 +453,31 @@ export class MapComponent implements AfterViewInit {
   async addRoute() {
 
     this.routeToolbar = !this.routeToolbar;
-    const from_geometry: any = await this.locateFeature("dotFeature");
-    const from_coordinates = from_geometry.getCoordinates();
-    const from_coordinates_google: any = this.bing2GooglePosition(from_coordinates[0],from_coordinates[1]);
 
-    const to_geometry: any = await this.locateFeature("pinpoint");
-    const to_coordinates = to_geometry.getCoordinates();
-    const to_coordinates_google: any = this.bing2GooglePosition(to_coordinates[0],to_coordinates[1]);
+    if (this.routeToolbar) {
+      try { 
+        const from_geometry: any = await this.locateFeature("dotFeature");
+        const from_coordinates = from_geometry.getCoordinates();
+        const from_coordinates_google: any = this.bing2GooglePosition(from_coordinates[0],from_coordinates[1]);
 
-    setTimeout(() => {
+        const to_geometry: any = await this.locateFeature("pinpoint");
+        const to_coordinates = to_geometry.getCoordinates();
+        const to_coordinates_google: any = this.bing2GooglePosition(to_coordinates[0],to_coordinates[1]);
+    
+        setTimeout(() => {
+    
+          this.roteFrom.nativeElement.value = from_coordinates_google;
+          this.roteTo.nativeElement.value = to_coordinates_google;
+    
+        }, 500);
+        this.calculateRoute(from_coordinates_google,to_coordinates_google);
+      } catch(error: any){
+        this.logDebug(`Error creating rote: ${JSON.stringify(error)}`);
+      }
+    }
 
-      this.roteFrom.nativeElement.value = from_coordinates_google;
-      this.roteTo.nativeElement.value = to_coordinates_google;
+    this.btnRote.nativeElement.style.backgroundColor = this.routeToolbar ? '#a8f29b' : '#e38178';
 
-    }, 500);
-
-
-    this.calculateRoute(from_coordinates_google,to_coordinates_google);
-
-    this.routeFrom = undefined;
-    this.routeTo = undefined;
-
-
-
-
-    // const from_geometry: any = await this.locateFeature("dotFeature");
-    // const from_coordinates = from_geometry.getCoordinates();
-    // const from_coordinates_google: any = this.bing2GooglePosition(from_coordinates[0],from_coordinates[1]);
-
-    //await this.cacheMapTiles(from_coordinates_google[0], from_coordinates_google[1], 0.02);
-    //this.cacheMapTiles(from_coordinates_google[0], from_coordinates_google[1], 16);
-//    this.cacheMapTiles(48.858, 2.295, 12);
-    //this.cacheMapTiles(40.131376696001155 , -7.503030225953948, 16);
-
-    // const tileUrl = this.getMapTile(from_coordinates_google[1],from_coordinates_google[0], this.mapZoon);
-    // console.log(tileUrl);
-
-    // const browser = await puppeteer.launch();
-    // const page = await browser.newPage();
-    // await page.goto('https://www.gays-cruising.com/en/portugal');
-    // await page.waitForFunction('typeof gcMaps !== "undefined"');
-    // const latlng = await page.evaluate(`gcMaps.parametros.markers[0][4]._latlng`);
-
-
-    /*
-    const from_geometry: any = await this.locateFeature("dotFeature");
-    const from_coordinates = from_geometry.getCoordinates();
-    const from_coordinates_google: any = this.bing2GooglePosition(from_coordinates[0],from_coordinates[1]);
-
-    const to_geometry: any = await this.locateFeature("pinpoint");
-    const to_coordinates = to_geometry.getCoordinates();
-    const to_coordinates_google: any = this.bing2GooglePosition(to_coordinates[0],to_coordinates[1]);
-
-
-    this.calculateRoute(from_coordinates_google,to_coordinates_google);
-    //this.calculateRoute(this.routeFrom,this.routeTo);
-
-    this.routeFrom = undefined;
-    this.routeTo = undefined;
-    */
   }
   //#endregion publics
 
@@ -631,14 +617,6 @@ export class MapComponent implements AfterViewInit {
 
       this.logDebug(`bing: ${ event.coordinate  }`);
       this.logDebug(`google: ${ coordinates  }`);
-
-
-      if (this.routeFrom == undefined){
-        this.routeFrom = coordinates
-        this.routeTo = undefined
-      } else {
-        this.routeTo = coordinates
-      }
 
     });
 
@@ -910,7 +888,18 @@ export class MapComponent implements AfterViewInit {
   }
 
   private getMapTile(latitude: number, longitude: number, zoom: number) {
-    const baseUrl = this.googleStyleMap;   //'http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}';
+
+    let baseUrl = '';
+    if (this.selectedLayer == 'Google'){
+      baseUrl = this.googleStyleMap;
+    } else if (this.selectedLayer == 'OSM') {
+      baseUrl = 'https://tile.openstreetmap.org/x/y/z.png'
+    }
+    //# TODO: bing = 'https://t0.ssl.ak.dynamic.tiles.virtualearth.net/comp/ch/0?mkt=en-US&it=G,L&shading=hill&og=2431&n=z'
+    
+
+
+    
     const z = Math.round(zoom);
     const lon2tile = (lon:any,zoom:any) => (Math.floor((lon+180)/360*Math.pow(2,zoom)));
     const lat2tile = (lat:any,zoom:any) => (Math.floor((1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2 *Math.pow(2,zoom)));
