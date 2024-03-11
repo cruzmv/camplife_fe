@@ -57,9 +57,13 @@
             </button>
             <button #btnRote (click)="addRoute()" style="font-weight: bolder;">Rote [{{routeToolbar ? 'ON':'OFF'}}]</button>
             <button #btnRadio (click)="playRadio()" style="font-weight: bolder;">Radio [{{radioPlaying ? 'ON' :'OFF'}}]</button>
-
-            <button (click)="fetchPlaces()" style="font-weight: bolder;">Get Camping Here</button>
-            <button (click)="fetchCruiser()" style="font-weight: bolder;">Get Cruiser Here</button>
+            <button #btnYouTube (click)="playYouTube()" style="font-weight: bolder;">YouTube [{{youtubeWindow ? 'ON' :'OFF'}}]</button>
+            <button (click)="fetchPlaces()" class="action-button">
+                <img src="assets/camping.svg" width="24px"> Show Campings
+            </button>
+            <button (click)="fetchCruiser()" class="action-button">
+                <img src="assets/dick.png" width="24px"> Show Cruisers
+            </button>
             <button (click)="updatePlaces()" style="font-weight: bolder;">Update Camping Here</button>
             <button (click)="cleanMap()" style="font-weight: bolder;">Clean the Map</button>
             <button (click)="cleanCache()" style="font-weight: bolder;">Clean the Cache</button>
@@ -141,6 +145,11 @@
         <button *ngIf="this.selectedLayer !== 'Bing'" nbButton status="basic" (click)="cacheRote()">Cache Rote</button>
         <button nbButton status="basic" (click)="startDrive()">Start Drive</button>
 
+    </div>
+
+    <div *ngIf="youtubeWindow" class="youtube-window">
+        <youtube-player #my_youtubePlayer [videoId]="youtubeVideoId"></youtube-player>
+        <input #youtubeInput type="text" (input)="updateYoutube($event)">
     </div>
 
     <div #mapElement class="map"></div>

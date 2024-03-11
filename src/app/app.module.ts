@@ -13,6 +13,7 @@ import { HttpClientModule } from '@angular/common/http';
 import { ImageViewerComponent } from './components/image-viewer/image-viewer.component';
 
 import { MapComponent } from './components/map/map.component';
+import { YouTubePlayerModule } from '@angular/youtube-player';
 
 
 @NgModule({
@@ -38,7 +39,8 @@ import { MapComponent } from './components/map/map.component';
     NbSpinnerModule,
     NbWindowModule.forRoot({}),
     NbInputModule,
-    NbSelectModule
+    NbSelectModule,
+    YouTubePlayerModule
   ],
   providers: [
     provideClientHydration()

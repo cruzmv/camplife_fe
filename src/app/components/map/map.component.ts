@@ -1,5 +1,5 @@
 //#region imports
-import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, Inject, TemplateRef, ViewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectorRef, Component, ElementRef, HostListener, Inject, OnInit, TemplateRef, ViewChild } from '@angular/core';
 import { parameters } from '../../config';
 import Map from 'ol/Map';
 import View from 'ol/View';
@@ -25,19 +25,27 @@ import LineString from 'ol/geom/LineString';
 import * as polyline from '@mapbox/polyline';
 import { v4 as uuidv4 } from 'uuid';
 import { Geolocation } from 'ol';
+import { YouTubePlayer } from '@angular/youtube-player';
 //#endregion imports
+
+//declare var YT: any;
 
 interface pointOptions {
   color: string,
   name: string
 }
 
+// interface Video {
+//   title: string;
+//   link: string;
+// }
+
 @Component({
   selector: 'app-map',
   templateUrl: './map.component.html',
   styleUrl: './map.component.scss'
 })
-export class MapComponent implements AfterViewInit {
+export class MapComponent implements AfterViewInit, OnInit {
 
   //#region declares
   @ViewChild('mapElement', { static: false }) mapElement!: ElementRef;
@@ -60,7 +68,10 @@ export class MapComponent implements AfterViewInit {
   @ViewChild('btnRadio') btnRadio!: ElementRef;
   @ViewChild('btnDebug') btnDebug!: ElementRef;
   @ViewChild('btnRote') btnRote!: ElementRef;
-  
+  @ViewChild('btnYouTube') btnYouTube!: ElementRef;
+  @ViewChild('youtubeInput') youtubeInput!: ElementRef;
+  @ViewChild('my_youtubePlayer') my_youtubePlayer!: YouTubePlayer;
+
   map: Map = new Map({
     controls: []
   });
@@ -84,6 +95,8 @@ export class MapComponent implements AfterViewInit {
   gpsStatus: boolean = true;
   geolocation: any;
   dateTimeDisplay: string = '';
+  youtubeWindow: boolean = false;
+  youtubeVideoId: string = '8xDdlfdWLI8';
   location_icons = [
     { category: 'Fuel Station', src: 'assets/gas-pump.png' },
     { category: 'Showers', src: 'assets/shower.png' },
@@ -108,6 +121,9 @@ export class MapComponent implements AfterViewInit {
     { category: 'HOMESTAYS ACCOMMODATION', src: 'assets/homestay.png' },
     { category: 'CRUISER', src: 'assets/dick.png' },
   ];
+
+  //apiLoaded = false;
+
   //#endregion declares
 
   constructor(private httpClient: HttpClient,
@@ -126,6 +142,12 @@ export class MapComponent implements AfterViewInit {
     this.logDebug('You are online!');
   }
 
+  ngOnInit(): void {
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.body.appendChild(tag);
+  }
+  
   ngAfterViewInit(): void {
     this.photoView.nativeElement.hidden = true;
     this.initializeMap();
@@ -200,7 +222,34 @@ export class MapComponent implements AfterViewInit {
     this.btnRadio.nativeElement.style.backgroundColor = this.radioPlaying ? '#a8f29b' : '#e38178';
     this.btnDebug.nativeElement.style.backgroundColor = this.debugWindow ? '#a8f29b' : '#e38178';
     this.btnRote.nativeElement.style.backgroundColor = this.routeToolbar ? '#a8f29b' : '#e38178';
+    this.btnYouTube.nativeElement.style.backgroundColor = this.youtubeWindow ? '#a8f29b' : '#e38178';
 
+
+    // const apiKey = 'AIzaSyD2uIOIolOd0J23d-4VAo1uRdioG9T3VWA';
+    // const playlistId = 'PLUzvkcJZ1D2MEI0tLhoCjHPvaLyzanYUC';
+    // const maxResults = 10;    
+    // fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlistId}&key=${apiKey}&maxResults=${maxResults}`)
+    //     works:   https://youtube.googleapis.com/youtube/v3/playlists?id=PLUzvkcJZ1D2MEI0tLhoCjHPvaLyzanYUC&key=AIzaSyD2uIOIolOd0J23d-4VAo1uRdioG9T3VWA
+    // .then(response => response.json())
+    // .then(data => {
+    //     console.log('Videos:', data.items);
+    // })
+    // .catch(error => console.error('Error:', error));
+
+
+  }
+
+  playYouTube(){
+    //https://www.angularjswiki.com/angular/how-to-embed-youtube-videos-in-angular-apps/
+    this.youtubeWindow = !this.youtubeWindow;
+  }
+
+  updateYoutube(event: any){
+    const regex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+    const match = event.srcElement.value.match(regex);
+    if (match && match[1]) {
+      this.youtubeVideoId = match[1]
+    }
   }
 
   playRadio(){
@@ -553,21 +602,47 @@ export class MapComponent implements AfterViewInit {
           const place = this.places.find((p) => p.place_id === feature.getProperties()['id']);
           let tooltipContent = '';
           if (place){
+            if (place.water_point && parseInt(place.water_point) > 0)
+              tooltipContent+="<img src='assets/tap-water.svg' width='24px'> ";
 
-            if (place.parking_price) {
-              tooltipContent += " " + place.parking_price;
-            }
+            if (place.black_water && parseInt(place.black_water) > 0)
+              tooltipContent+="<img src='assets/black-water.svg' width='24px'> ";
 
-            if (place.service_price) {
-              tooltipContent += " " + place.service_price
-            }
+            if (place.gray_water && parseInt(place.gray_water) > 0)
+              tooltipContent+="<img src='assets/gray-water.svg' width='24px'> ";
+
+            if (place.public_toilet && parseInt(place.public_toilet) > 0)
+              tooltipContent+="<img src='assets/public-toilet.svg' width='24px'> ";
+
+            if (place.shower && parseInt(place.shower) > 0)
+              tooltipContent+="<img src='assets/shower.svg' width='24px'> ";
+
+            if (place.electricity && parseInt(place.electricity) > 0)
+              tooltipContent+="<img src='assets/electricity.svg' width='24px'> ";
+
+            if (place.has_wifi && parseInt(place.has_wifi) > 0)
+              tooltipContent+="<img src='assets/wifi.svg' width='24px'> ";
+
+            if (place.laudry && parseInt(place.laudry) > 0)
+              tooltipContent+="<img src='assets/laudry.svg' width='24px'>"; 
           }
+
+          if (tooltipContent == ''){
+            tooltipContent = `<label>${place.place_resume}</label>`;
+          }
+
+          if (place.number_places && parseInt(place.number_places) > 0)
+            tooltipContent+=` [${place.number_places} places]`;
 
           this.tooltipOverlay.getElement()!.innerHTML = tooltipContent;
           this.tooltipOverlay.getElement()!.style.fontSize = '18px';
           this.tooltipOverlay.getElement()!.style.color = 'black';
           this.tooltipOverlay.getElement()!.style.fontWeight = 'bold';
           this.tooltipOverlay.getElement()!.style.backgroundColor = 'gray';
+          this.tooltipOverlay.getElement()!.style.maxWidth = '250px';
+          this.tooltipOverlay.getElement()!.style.wordWrap = 'break-word';
+          this.tooltipOverlay.getElement()!.style.overflowWrap = 'break-word';
+
           this.tooltipOverlay.setPosition(event.coordinate);
 
           // Show the tooltip overlay
@@ -805,8 +880,6 @@ export class MapComponent implements AfterViewInit {
 
   private addMarkers(): void {
     const vectorLayer = this.map.getLayers().getArray().find((layer) => layer instanceof VectorLayer) as VectorLayer<VectorSource>;
-    //const vectores = this.map.getLayers().getArray().filter((layer) => layer instanceof VectorLayer);
-    //const vectorLayer = vectores[0] as VectorLayer<VectorSource>;
 
     if (vectorLayer) {
       const vectorSource = vectorLayer.getSource();
@@ -842,8 +915,8 @@ export class MapComponent implements AfterViewInit {
               text: `${place.parking_price ? place.parking_price : ''}|${place.service_price ? place.service_price: ''}${place.parking_price || place.service_price ? '' : place.place_name }`,
               font: 'bold 12px Arial',
               offsetY: 5,
-              fill: new Fill({color: 'rgb(0,0,0)'}),
-              stroke: new Stroke({color: 'rgb(255,255,255)', width: 1})
+              fill: new Fill({color: 'rgb(255,255,255)'}),
+              stroke: new Stroke({color: 'rgb(0,0,0)', width: 5})
             })
 
           });
@@ -911,21 +984,20 @@ export class MapComponent implements AfterViewInit {
                   .replace('{y}', y.toString())
   }
 
+  // private handleOrientation(event: DeviceOrientationEvent) {
+  //   if (event.alpha !== null) {
+  //     const compassHeading = event.alpha;
+  //     const bearingToNorth = 360 - compassHeading;
 
-  private handleOrientation(event: DeviceOrientationEvent) {
-    if (event.alpha !== null) {
-      const compassHeading = event.alpha;
-      const bearingToNorth = 360 - compassHeading;
+  //     this.logDebug(`North: ${bearingToNorth}`)
 
-      this.logDebug(`North: ${bearingToNorth}`)
-
-      //const map = document.getElementById('map') as any;
-      //map.setRotation(bearingToNorth);
-      this.map.getView().setRotation(bearingToNorth);
-    } else {
-      this.logDebug(`no event.alpha`);
-    }
-  }
+  //     //const map = document.getElementById('map') as any;
+  //     //map.setRotation(bearingToNorth);
+  //     this.map.getView().setRotation(bearingToNorth);
+  //   } else {
+  //     this.logDebug(`no event.alpha`);
+  //   }
+  // }
 
   private drawRoteOption(geoRote: [[number,number],[number,number]], driveMode: string, avoide: any,vehicleType: string, roteZoom: string) {
 

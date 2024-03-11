@@ -267,3 +267,32 @@ button {
     width: 48px;
 }
 
+.action-button {
+    font-weight: bolder;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-content: center;
+    justify-content: space-around;
+    align-items: center;    
+}
+
+
+.youtube-window {
+    display: flex;
+    position: absolute;
+    top: 10%;
+    width: 663px;
+    height: 459px;
+    z-index: 9999;
+    background-color: rgba(45, 50, 87, 0.8);
+    padding: 10px;
+    border-style: solid;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    flex-direction: column;
+    justify-content: space-around;
+    flex-wrap: nowrap;
+}
+
+
