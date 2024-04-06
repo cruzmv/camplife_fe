@@ -1,6 +1,11 @@
 <div class="map-container">
 
-    <div class="top-info">
+    <nb-icon *ngIf="!topMenuBarStatus" 
+             icon="arrowhead-down-outline" 
+             class="open-top-toolbar" 
+             (click)="topMenu()"></nb-icon> 
+
+    <div *ngIf="topMenuBarStatus"  class="top-info">
         <div class="memory-info">
             <label #memoryStatus></label>
         </div>
@@ -8,19 +13,42 @@
             {{dateTimeDisplay}}
         </div>
         <div class="center-info-right">
-            
+            <!-- <input type="text" > -->
+            <!-- <select class="search-input">
+                <option value="" disabled selected>...</option>
+            </select> -->
+            <input list="options" 
+                   class="search-input" 
+                   (ngModel)="selectedSearchOption" 
+                   (keydown)="search_place($event)"
+                   (change)="searchOptionSelected($event)">
+            <datalist id="options">
+              <option *ngFor="let option of search_options" [value]="option.value">{{ option.label }}</option>
+            </datalist>
         </div>
-        <div class="status">
-            <img #iconWiFi src="assets/wifi-off-outline.svg" class="status_icon">
-            <img #iconGps src="assets/compass-outline.svg" class="status_icon">
+        <div>
+            <nb-icon icon="arrowhead-up-outline" (click)="topMenu()"></nb-icon> 
         </div>
-
     </div>
 
-    <div class="right-toolbar">
+    <nb-icon *ngIf="!rigthToolbarStatus" 
+             icon="skip-back-outline" 
+             class="open-right-toolbar" 
+             (click)="rightToolBar()"></nb-icon> 
+
+    <div *ngIf="!rigthToolbarStatus" class="status-overflow">
+        <img #iconWiFi src="assets/wifi-off-outline.svg" class="status_icon">
+        <img #iconGps src="assets/compass-outline.svg" class="status_icon">
+    </div>
+
+    <div *ngIf="rigthToolbarStatus" class="right-toolbar">
         <div class="top-menu">
-            <nb-icon icon="skip-back-outline" style="font-size: 2.25rem;"></nb-icon>
-            <nb-icon icon="skip-forward-outline" style="font-size: 2.25rem;"></nb-icon>
+            <div class="status">
+                <img #iconWiFi src="assets/wifi-off-outline.svg" class="status_icon">
+                <img #iconGps src="assets/compass-outline.svg" class="status_icon">
+            </div>
+    
+            <nb-icon icon="skip-forward-outline" style="font-size: 2.25rem;" (click)="rightToolBar()"></nb-icon>
         </div>
 
         <div class="toolbar-top">
@@ -58,13 +86,13 @@
             <button #btnRote (click)="addRoute()" style="font-weight: bolder;">Rote [{{routeToolbar ? 'ON':'OFF'}}]</button>
             <button #btnRadio (click)="playRadio()" style="font-weight: bolder;">Radio [{{radioPlaying ? 'ON' :'OFF'}}]</button>
             <button #btnYouTube (click)="playYouTube()" style="font-weight: bolder;">YouTube [{{youtubeWindow ? 'ON' :'OFF'}}]</button>
-            <button (click)="fetchPlaces()" class="action-button">
+            <button #btnShowCamping (click)="fetchPlaces()" class="action-button">
                 <img src="assets/camping.svg" width="24px"> Show Campings
             </button>
-            <button (click)="fetchCruiser()" class="action-button">
+            <button #btnShowCruiser (click)="fetchCruiser()" class="action-button">
                 <img src="assets/dick.png" width="24px"> Show Cruisers
             </button>
-            <button (click)="updatePlaces()" style="font-weight: bolder;">Update Camping Here</button>
+            <button #btnUpdPlace (click)="updatePlaces()" style="font-weight: bolder;">Update Camping Here</button>
             <button (click)="cleanMap()" style="font-weight: bolder;">Clean the Map</button>
             <button (click)="cleanCache()" style="font-weight: bolder;">Clean the Cache</button>
             <button (click)="toggleFullScreenMap()" style="font-weight: bolder;">[[ ]]</button>
@@ -148,8 +176,8 @@
     </div>
 
     <div *ngIf="youtubeWindow" class="youtube-window">
-        <youtube-player #my_youtubePlayer [videoId]="youtubeVideoId"></youtube-player>
-        <input #youtubeInput type="text" (input)="updateYoutube($event)">
+        <youtube-player #my_youtubePlayer [videoId]="youtubeVideoId" [width]="533" [height]="329"></youtube-player>
+        <input #youtubeInput type="text" (input)="updateYoutube($event)" class="youtube-input">
     </div>
 
     <div #mapElement class="map"></div>

@@ -69,12 +69,16 @@ export class MapComponent implements AfterViewInit, OnInit {
   @ViewChild('btnDebug') btnDebug!: ElementRef;
   @ViewChild('btnRote') btnRote!: ElementRef;
   @ViewChild('btnYouTube') btnYouTube!: ElementRef;
+  @ViewChild('btnUpdPlace') btnUpdPlace!: ElementRef;
+  @ViewChild('btnShowCamping') btnShowCamping!: ElementRef;
+  @ViewChild('btnShowCruiser') btnShowCruiser!: ElementRef;
   @ViewChild('youtubeInput') youtubeInput!: ElementRef;
   @ViewChild('my_youtubePlayer') my_youtubePlayer!: YouTubePlayer;
 
   map: Map = new Map({
     controls: []
   });
+  openRotesApiKey = '5b3ce3597851110001cf6248822f7a9d64924aa5bb3fb8ace99891d2'
   isMapFullScreen: boolean = false;
   selectedLayer: string = 'Google';
   bingStyleMap: string = 'AerialWithLabelsOnDemand';
@@ -122,6 +126,13 @@ export class MapComponent implements AfterViewInit, OnInit {
     { category: 'CRUISER', src: 'assets/dick.png' },
   ];
 
+  search_options = [
+    { label: '', value: '' },
+  ];
+  selectedSearchOption: string = '';
+  rigthToolbarStatus: boolean = true;
+  topMenuBarStatus: boolean = true;
+
   //apiLoaded = false;
 
   //#endregion declares
@@ -147,7 +158,7 @@ export class MapComponent implements AfterViewInit, OnInit {
     tag.src = 'https://www.youtube.com/iframe_api';
     document.body.appendChild(tag);
   }
-  
+
   ngAfterViewInit(): void {
     this.photoView.nativeElement.hidden = true;
     this.initializeMap();
@@ -227,7 +238,7 @@ export class MapComponent implements AfterViewInit, OnInit {
 
     // const apiKey = 'AIzaSyD2uIOIolOd0J23d-4VAo1uRdioG9T3VWA';
     // const playlistId = 'PLUzvkcJZ1D2MEI0tLhoCjHPvaLyzanYUC';
-    // const maxResults = 10;    
+    // const maxResults = 10;
     // fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlistId}&key=${apiKey}&maxResults=${maxResults}`)
     //     works:   https://youtube.googleapis.com/youtube/v3/playlists?id=PLUzvkcJZ1D2MEI0tLhoCjHPvaLyzanYUC&key=AIzaSyD2uIOIolOd0J23d-4VAo1uRdioG9T3VWA
     // .then(response => response.json())
@@ -343,6 +354,7 @@ export class MapComponent implements AfterViewInit, OnInit {
     const apiUrl = `${this.apiEndPoint}get_cruiser_list`;
     const queryParams = { lat: lat.toString(), long: long.toString() };
 
+    this.btnShowCruiser.nativeElement.disabled = true;
     this.httpClient.get(apiUrl, { params: queryParams }).subscribe((response: any) => {
 
       response.data.forEach((place:any) => {
@@ -364,6 +376,7 @@ export class MapComponent implements AfterViewInit, OnInit {
       localStorage.setItem("places",JSON.stringify(this.places));
       this.logDebug(`${response.data.length} fetched, total: ${response.data.length}`);
       this.addMarkers();
+      this.btnShowCruiser.nativeElement.disabled = false;
     },
       (error) => {
         this.logDebug(`Error fetching cruiser places: ${JSON.stringify(error)}`);
@@ -387,11 +400,13 @@ export class MapComponent implements AfterViewInit, OnInit {
     const apiUrl = `${this.apiEndPoint}get_place_list`;
     const queryParams = { lat: lat.toString(), long: long.toString() };
 
+    this.btnShowCamping.nativeElement.disabled = true;
     this.httpClient.get(apiUrl, { params: queryParams }).subscribe((response: any) => {
       this.places = this.places.concat(response.data);
       localStorage.setItem("places",JSON.stringify(this.places));
       this.logDebug(`${response.data.length} fetched, total: ${this.places.length}`);
       this.addMarkers();
+      this.btnShowCamping.nativeElement.disabled = false;
     },
       (error) => {
         this.logDebug(`Error fetching places: ${JSON.stringify(error)}`);
@@ -423,7 +438,7 @@ export class MapComponent implements AfterViewInit, OnInit {
         thumbPhotoItem.style.cursor = "pointer";
 
         thumbImage.addEventListener('click', () => {
-          this.photoView.nativeElement.children[1].children.main_foto.src = photo.link_thumb;
+          this.photoView.nativeElement.children[1].children.main_foto.src = photo.link_large;
         });
 
         thumbPhotoItem.appendChild(thumbImage);
@@ -504,7 +519,7 @@ export class MapComponent implements AfterViewInit, OnInit {
     this.routeToolbar = !this.routeToolbar;
 
     if (this.routeToolbar) {
-      try { 
+      try {
         const from_geometry: any = await this.locateFeature("dotFeature");
         const from_coordinates = from_geometry.getCoordinates();
         const from_coordinates_google: any = this.bing2GooglePosition(from_coordinates[0],from_coordinates[1]);
@@ -512,12 +527,12 @@ export class MapComponent implements AfterViewInit, OnInit {
         const to_geometry: any = await this.locateFeature("pinpoint");
         const to_coordinates = to_geometry.getCoordinates();
         const to_coordinates_google: any = this.bing2GooglePosition(to_coordinates[0],to_coordinates[1]);
-    
+
         setTimeout(() => {
-    
+
           this.roteFrom.nativeElement.value = from_coordinates_google;
           this.roteTo.nativeElement.value = to_coordinates_google;
-    
+
         }, 500);
         this.calculateRoute(from_coordinates_google,to_coordinates_google);
       } catch(error: any){
@@ -527,6 +542,50 @@ export class MapComponent implements AfterViewInit, OnInit {
 
     this.btnRote.nativeElement.style.backgroundColor = this.routeToolbar ? '#a8f29b' : '#e38178';
 
+  }
+
+  search_place(event: any){
+    if (event.srcElement.value.length >= 5 ){
+      if ((event.keyCode >= 65 && event.keyCode <= 90) || // A-Z
+          (event.keyCode >= 48 && event.keyCode <= 57) || // 0-9
+          (event.keyCode >= 96 && event.keyCode <= 105) || // Numpad 0-9
+           event.keyCode == 8 || event.keyCode == 46 ) {
+          const url = `https://api.openrouteservice.org/geocode/autocomplete?api_key=${this.openRotesApiKey}&text=${event.srcElement.value}`;
+          this.httpClient.get(url).subscribe((response: any)=>{
+            this.search_options = [];
+            response.features.forEach((feature: any) => {
+              this.search_options.push({
+                label: `${feature.properties.street != undefined ? feature.properties.street : feature.properties.name} ${feature.properties.region}`,
+                value: `${feature.properties.localadmin != undefined ? feature.properties.localadmin : feature.properties.locality} ${feature.properties.country}`
+              })
+            });
+
+            const url = `https://api.openrouteservice.org/geocode/search?api_key=${this.openRotesApiKey}&text=${event.srcElement.value}`;
+            this.httpClient.get(url).subscribe((response: any)=>{
+              response.features.forEach((feature: any) => {
+                this.search_options.push({
+                  label: `${feature.properties.street != undefined ? feature.properties.street : feature.properties.name} ${feature.properties.region}`,
+                  value: `${feature.properties.localadmin != undefined ? feature.properties.localadmin : feature.properties.locality} ${feature.properties.country}`
+                })
+              });  
+            })
+
+          })
+      } else if (event.keyCode == 13){
+        this.executeSearch(event.srcElement.value);
+      }
+    }
+  }
+
+  searchOptionSelected(event: any){
+    this.executeSearch(event.srcElement.value);
+  }
+
+  rightToolBar(){
+    this.rigthToolbarStatus = !this.rigthToolbarStatus;
+  }
+  topMenu(){
+    this.topMenuBarStatus = !this.topMenuBarStatus;
   }
   //#endregion publics
 
@@ -624,7 +683,7 @@ export class MapComponent implements AfterViewInit, OnInit {
               tooltipContent+="<img src='assets/wifi.svg' width='24px'> ";
 
             if (place.laudry && parseInt(place.laudry) > 0)
-              tooltipContent+="<img src='assets/laudry.svg' width='24px'>"; 
+              tooltipContent+="<img src='assets/laudry.svg' width='24px'>";
           }
 
           if (tooltipContent == ''){
@@ -951,8 +1010,10 @@ export class MapComponent implements AfterViewInit, OnInit {
     const apiUrl = `${this.apiEndPoint}update_place_coordinate`;
     const requestBody = { lat: lat, long: long };
 
+    this.btnUpdPlace.nativeElement.disabled = true;
     this.httpClient.post(apiUrl, requestBody).subscribe((response: any) => {
       this.logDebug(`Finished update region ${JSON.stringify(requestBody)}`);
+      this.btnUpdPlace.nativeElement.disabled = false;
       this.fetchPlaces(bingLat, bingLong);
     },
     error=>{
@@ -969,10 +1030,10 @@ export class MapComponent implements AfterViewInit, OnInit {
       baseUrl = 'https://tile.openstreetmap.org/x/y/z.png'
     }
     //# TODO: bing = 'https://t0.ssl.ak.dynamic.tiles.virtualearth.net/comp/ch/0?mkt=en-US&it=G,L&shading=hill&og=2431&n=z'
-    
 
 
-    
+
+
     const z = Math.round(zoom);
     const lon2tile = (lon:any,zoom:any) => (Math.floor((lon+180)/360*Math.pow(2,zoom)));
     const lat2tile = (lat:any,zoom:any) => (Math.floor((1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2 *Math.pow(2,zoom)));
@@ -1003,7 +1064,7 @@ export class MapComponent implements AfterViewInit, OnInit {
 
     const postUrl = `https://api.openrouteservice.org/v2/directions/${driveMode}`;
     const header = {
-      Authorization: "5b3ce3597851110001cf6248822f7a9d64924aa5bb3fb8ace99891d2"
+      Authorization: this.openRotesApiKey
     };
 
     const avoidFeatures = []
@@ -1064,7 +1125,7 @@ export class MapComponent implements AfterViewInit, OnInit {
 
     const postUrl = `https://api.openrouteservice.org/v2/directions/driving-car`;
     const header = {
-      Authorization: "5b3ce3597851110001cf6248822f7a9d64924aa5bb3fb8ace99891d2"
+      Authorization: this.openRotesApiKey
     };
     const body = {
       "coordinates":[
@@ -1107,7 +1168,7 @@ export class MapComponent implements AfterViewInit, OnInit {
 
 
     /*
-    const url = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=5b3ce3597851110001cf6248822f7a9d64924aa5bb3fb8ace99891d2&start=${start[0]},${start[1]}&end=${end[0]},${end[1]}`;
+    const url = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${this.openRotesApiKey}&start=${start[0]},${start[1]}&end=${end[0]},${end[1]}`;
     this.httpClient.get(url).subscribe((response: any) => {
       const coordinates = response.features[0].geometry.coordinates;
       const routeCoords = coordinates.map((coord: any) => fromLonLat(coord));
@@ -1161,6 +1222,34 @@ export class MapComponent implements AfterViewInit, OnInit {
       source: vectorSource,
     });
     this.map.addLayer(vectorLayer);
+  }
+
+  private executeSearch(searchString: string){
+    const url = `https://api.openrouteservice.org/geocode/search?api_key=${this.openRotesApiKey}&text=${searchString}`;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;    
+    this.httpClient.get(url).subscribe((response: any)=>{
+      response.features.forEach((feature:any) => {
+        const transformedCoordinates = fromLonLat(feature.geometry.coordinates);
+        this.drawPoint(transformedCoordinates,{ 
+          name: feature.properties.id,
+          color: '#2403fc'
+        } as pointOptions);        
+        minX = Math.min(minX, transformedCoordinates[0]);
+        minY = Math.min(minY, transformedCoordinates[1]);
+        maxX = Math.max(maxX, transformedCoordinates[0]);
+        maxY = Math.max(maxY, transformedCoordinates[1]);
+      });
+
+      const bbox = [minX, minY, maxX, maxY];
+      this.map.getView().fit(bbox, {
+        padding: [10, 10, 10, 10], // Optional padding
+        duration: 1000 // Animation duration in milliseconds
+      });
+
+    })
   }
 
   //#endregion privates
