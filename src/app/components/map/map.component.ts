@@ -132,6 +132,8 @@ export class MapComponent implements AfterViewInit, OnInit {
   selectedSearchOption: string = '';
   rigthToolbarStatus: boolean = true;
   topMenuBarStatus: boolean = true;
+  rotateOption: boolean = true;
+  driving: boolean = false;
 
   //apiLoaded = false;
 
@@ -197,6 +199,13 @@ export class MapComponent implements AfterViewInit, OnInit {
       const now = new Date()
       this.dateTimeDisplay = `${now.toDateString()} ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
       this.cdr.detectChanges();
+
+      if (this.driving){
+        const coords: any = this.map.getView().getCenter();
+        const coordinates: any = this.bing2GooglePosition(coords[0],coords[1]);
+        this.checkDistanceToSteps(coordinates);
+      }
+
     }, 1000)
 
     // Fetch the off line icons because when internet is off, it will not manage to fetch, so fetch it in advanced
@@ -221,13 +230,10 @@ export class MapComponent implements AfterViewInit, OnInit {
       const heading = this.geolocation.getHeading(); // Get device heading
       if (heading !== undefined) {
         const rotation = (360 - heading) * Math.PI / 180; // Convert heading to radians
+        this.logDebug(`geolocation.rotate, heading: ${heading}, rotation: ${rotation}`);
         this.map.getView().setRotation(rotation); // Set map rotation
       }
     });
-
-    // Start tracking the device's position
-    //this.geolocation.setTracking(true);
-
 
     this.btnTrack.nativeElement.style.backgroundColor = this.trackingStatus ? '#a8f29b' : '#e38178';
     this.btnRadio.nativeElement.style.backgroundColor = this.radioPlaying ? '#a8f29b' : '#e38178';
@@ -382,8 +388,6 @@ export class MapComponent implements AfterViewInit, OnInit {
         this.logDebug(`Error fetching cruiser places: ${JSON.stringify(error)}`);
       }
     );
-
-
   }
 
   fetchPlaces(latFromPar: any = undefined,longFromPar: any = undefined){
@@ -467,6 +471,7 @@ export class MapComponent implements AfterViewInit, OnInit {
     this.routeToolbar = !this.routeToolbar;
     this.map.getView().setZoom(this.roteZoom.nativeElement.value);
     this.updateTrackingStatus();
+    this.driving = true;
   }
 
   cacheRote(){
@@ -803,7 +808,7 @@ export class MapComponent implements AfterViewInit, OnInit {
     }
     this.gpsData.push(geoData)
 
-    this.logDebug(JSON.stringify(geoData));
+    //this.logDebug(JSON.stringify(geoData));
     this.httpClient.post(`${this.apiEndPoint}log_geo`, geoData).subscribe((response: any) => {
       //this.logDebug(JSON.stringify(response));
     },error => {
@@ -1059,6 +1064,129 @@ export class MapComponent implements AfterViewInit, OnInit {
   //     this.logDebug(`no event.alpha`);
   //   }
   // }
+
+
+  private decodePolyline(polyline: string): number[][] {
+    const coordinates: number[][] = [];
+    let index = 0;
+    let lat = 0;
+    let lng = 0;
+
+    while (index < polyline.length) {
+        let shift = 0;
+        let result = 0;
+        let byte;
+
+        // Decode latitude
+        do {
+            byte = polyline.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+
+        const deltaLat = ((result & 1) ? ~(result >> 1) : (result >> 1));
+        lat += deltaLat;
+
+        shift = 0;
+        result = 0;
+
+        // Decode longitude
+        do {
+            byte = polyline.charCodeAt(index++) - 63;
+            result |= (byte & 0x1f) << shift;
+            shift += 5;
+        } while (byte >= 0x20);
+
+        const deltaLng = ((result & 1) ? ~(result >> 1) : (result >> 1));
+        lng += deltaLng;
+
+        coordinates.push([lng * 1e-5, lat * 1e-5]);
+    }
+
+    return coordinates;
+  }
+
+
+
+  private calculateDistance(point1: any, point2: any) {
+    const lat1 = point1[1];
+    const lon1 = point1[0];
+    const lat2 = point2[1];
+    const lon2 = point2[0];
+
+    const R = 6371; // Radius of the Earth in km
+
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    const distance = R * c;
+
+    return distance * 1000; // Distance in meters
+  }
+
+
+
+  private checkDistanceToSteps(currentPosition: any) {
+    const polyline = this.myRote.rote.routes[0].geometry;
+
+    // Decode the polyline string to get the coordinates
+    const coordinates = this.decodePolyline(polyline);
+    let logFirstDistance = true;
+    this.logDebug(`...${this.myRote.rote.routes[0].segments[0].steps.length}`);
+    this.myRote.rote.routes[0].segments[0].steps.forEach((step: any) => {
+        if (step.done_1 == undefined || step.done_2 == undefined || step.done_3 == undefined){
+          const startPointIndex = step.way_points[0];
+          const endPointIndex = step.way_points[1];
+  
+          const startPoint = coordinates[startPointIndex];
+          const endPoint = coordinates[endPointIndex];
+  
+          const distanceToStep = this.calculateDistance(currentPosition, startPoint);
+          if (logFirstDistance){
+            this.logDebug(`${step.instruction} in ${distanceToStep} meters`);
+            logFirstDistance = false;
+          }
+  
+          // Trigger warning message when the distance is less than a specified value (e.g., 20 meters)
+          const warn = `${step.instruction} in ${Math.round(distanceToStep)} meters`;
+          if (distanceToStep <= 500 && step.done_1 == undefined) {
+            this.speak(warn);
+            step.done_1 = true;
+          }
+          if (distanceToStep <= 250 && step.done_2 == undefined) {
+            this.speak(warn);
+            step.done_2 = true;
+          }
+          if (distanceToStep <= 65 && step.done_3 == undefined) {
+            this.speak(warn);
+            step.done_3 = true;
+          }
+        }
+
+    });
+  }
+
+  private speak(text: string) {
+    if ('speechSynthesis' in window) {
+        const msg = new SpeechSynthesisUtterance(text);
+        const voices = window.speechSynthesis.getVoices();
+        const desiredVoice = voices.find(voice => voice.name === 'English United Kingdom');
+        if (desiredVoice){
+          msg.voice = desiredVoice;
+        }
+        msg.lang = 'en-US';
+        window.speechSynthesis.speak(msg);
+    } else {
+        console.error('Speech synthesis is not supported by your browser.');
+    }
+}  
+
 
   private drawRoteOption(geoRote: [[number,number],[number,number]], driveMode: string, avoide: any,vehicleType: string, roteZoom: string) {
 

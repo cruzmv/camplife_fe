@@ -46,6 +46,8 @@
             <div class="status">
                 <img #iconWiFi src="assets/wifi-off-outline.svg" class="status_icon">
                 <img #iconGps src="assets/compass-outline.svg" class="status_icon">
+                <input type="checkbox" id="rotateCheck" checked (change)="rotateOption = !rotateOption; geolocation.setTracking(rotateOption);">
+                <label for="rotateCheck">Rotate</label>
             </div>
     
             <nb-icon icon="skip-forward-outline" style="font-size: 2.25rem;" (click)="rightToolBar()"></nb-icon>
@@ -89,9 +91,9 @@
             <button #btnShowCamping (click)="fetchPlaces()" class="action-button">
                 <img src="assets/camping.svg" width="24px"> Show Campings
             </button>
-            <button #btnShowCruiser (click)="fetchCruiser()" class="action-button">
+            <!-- <button #btnShowCruiser (click)="fetchCruiser()" class="action-button">
                 <img src="assets/dick.png" width="24px"> Show Cruisers
-            </button>
+            </button> -->
             <button #btnUpdPlace (click)="updatePlaces()" style="font-weight: bolder;">Update Camping Here</button>
             <button (click)="cleanMap()" style="font-weight: bolder;">Clean the Map</button>
             <button (click)="cleanCache()" style="font-weight: bolder;">Clean the Cache</button>
@@ -120,15 +122,19 @@
 
         <!-- options-> avoid_features -->
         <label>Avoid</label>
-        <div>
-            <input #avoideToll type="checkbox" id="toll" name="avoideToll">
-            <label for="avoideToll">TollCross</label>
-
-            <input #avoideHighway type="checkbox" id="highways" name="avoideHighways">
-            <label for="avoideHighways">Highways</label>
-
-            <input #avoideFerrie type="checkbox" id="ferrie" name="avoideFerrie">
-            <label for="avoideFerrie">Ferries</label>
+        <div class="avoide">
+            <div>
+                <input #avoideToll type="checkbox" id="toll" name="avoideToll">
+                <label for="avoideToll" class="labelAvoid">TollCross</label>
+            </div>
+            <div>
+                <input #avoideHighway type="checkbox" id="highways" name="avoideHighways">
+                <label for="avoideHighways" class="labelAvoid">Highways</label>
+            </div>
+            <div>
+                <input #avoideFerrie type="checkbox" id="ferrie" name="avoideFerrie">
+                <label for="avoideFerrie" class="labelAvoid">Ferries</label>
+            </div>
         </div>
 
         <!-- options -> vehicle_type -->
@@ -146,13 +152,13 @@
         <select #roteZoom style="font-weight: bolder; width: 100%">
             <option>22</option>
             <option>21</option>
-            <option selected>20</option>
+            <option>20</option>
             <option>19</option>
             <option>18</option>
             <option>17</option>
             <option>16</option>
             <option>15</option>
-            <option>14</option>
+            <option selected>14</option>
             <option>13</option>
             <option>12</option>
             <option>11</option>
@@ -168,7 +174,6 @@
             <option>1</option>
         </select>
 
-        
         <button nbButton status="basic" (click)="drawRote()">Rote</button>
         <button *ngIf="this.selectedLayer !== 'Bing'" nbButton status="basic" (click)="cacheRote()">Cache Rote</button>
         <button nbButton status="basic" (click)="startDrive()">Start Drive</button>
