@@ -1,0 +1,163 @@
+<div class="map-container">
+
+    <!-- Top bar info-->
+    <div class="topInfo">
+        <div class="guidance-icon">
+            <img src="assets/turn-left.png">
+        </div>
+        <div class="guidance-text">
+            <label>In 500 meters Turn left at avenida da programação</label>
+        </div>
+        <div class="corner-info">
+            {{mapZoomValue | number:'1.0-2' }}
+        </div>
+    </div>
+
+    <!-- Open/Close Tools-->
+    <nb-icon *ngIf="!rightToolsIsActive" 
+             icon="settings-2-outline" 
+             class="open-right-toolbar"
+             (click)="rightToolsIsActive=!rightToolsIsActive">
+    </nb-icon> 
+
+    <!-- Tools -->
+    <div *ngIf="rightToolsIsActive" class="right-tools">
+        <nb-icon icon="close-square-outline" 
+                 class="tools-icons" 
+                 title="Close tools"
+                 (click)="rightToolsIsActive=!rightToolsIsActive">
+        </nb-icon>
+        <div class="circle-tool-icons" title="Change map">
+            <nb-icon icon="layers-outline" 
+                     class="tools-icons"
+                     (click)="layersBarIsActive=!layersBarIsActive">
+            </nb-icon> 
+        </div>
+        <div class="circle-tool-icons" title="Rotes">
+            <nb-icon icon="car-outline" 
+                     class="tools-icons"
+                     (click)="routeBar()"></nb-icon> 
+        </div>
+        <div class="circle-tool-icons" title="Campings">
+            <nb-icon icon="map-outline" 
+                     class="tools-icons"
+                     (click)="campingBarIsActive=!campingBarIsActive; showCamping()"></nb-icon> 
+        </div>
+        <div class="circle-tool-icons" title="Radio">
+            <nb-icon icon="music-outline" class="tools-icons"></nb-icon> 
+        </div>
+        <div class="circle-tool-icons" title="YouTube">
+            <nb-icon icon="tv-outline" class="tools-icons"></nb-icon> 
+        </div>
+        <div class="circle-tool-icons" title="Debug">
+            <nb-icon icon="credit-card-outline" class="tools-icons"></nb-icon> 
+        </div>
+        <div class="circle-tool-icons" title="Full Screen">
+            <nb-icon icon="external-link-outline" class="tools-icons"></nb-icon> 
+        </div>
+    </div>
+
+    <!-- Layers-->
+    <div *ngIf="layersBarIsActive" class="layers">
+        <div class="layer-company">
+            <img src="assets/google-maps.png" (click)="setMapCompany('Google')">
+            <img src="assets/windows.png" (click)="setMapCompany('Bing')">
+            <img src="assets/openstreetmap.png" (click)="setMapCompany('OSM')">
+        </div>
+        <div class="layer-options">
+            <button class="button-layer" 
+                    *ngFor="let layer of mapLayerOptionsAvailiable"
+                    (click)="setMapLayerOption(layer)">{{layer}}</button>
+        </div>
+    </div>
+
+    <!-- Routes -->
+    <div *ngIf="routeBarIsActive" class="routes">
+        <label class="route-label">Drive Mode</label>
+        <div class="routes-drive-type">
+            <div *ngFor="let mode of driveMode"
+                 [ngClass]="{'selected-mode': mode === choosedDriveMode}">
+                <img src="assets/{{mode}}.png" 
+                     title="{{mode}}" 
+                     class="route-icons"
+                     (click)="choosedDriveMode = mode">
+            </div>
+        </div>
+        <hr>
+        <label class="route-label">Avoid</label>
+        <div class="routes-avoide">
+            <div *ngFor="let avoid of avoidDrive"
+                 [ngClass]="{'selected-mode': choosedAvoids.includes(avoid)}">
+                <img src="assets/{{avoid}}.png" 
+                     title="{{avoid}}" 
+                     class="route-icons"
+                     (click)="setAvoid(avoid)">
+            </div>
+        </div>
+        <hr>
+        <label class="route-label">Type of Vehicle</label>
+        <div class="route-veicle-type">
+            <div *ngFor="let type of vehicleType"
+                 [ngClass]="{'selected-mode': type === choosedTypeVehicle}">
+                <img src="assets/{{type}}.png" 
+                     title="{{type}}" 
+                     class="route-icons"
+                     (click)="choosedTypeVehicle = type">
+            </div>
+        </div>
+        <hr>
+        <label class="route-label">Routes</label>
+        <div #routePois class="route-pois">
+            <div class="route-poi" id="location-from">
+                <!-- <input type="text" class="poi-input" value="Current Location"> -->
+                <input list="options" class="poi-input" value="Current Location">
+                <datalist id="options">
+                    <!-- <option *ngFor="let option of search_options" [value]="option.value">{{ option.label }}</option> -->
+                    <option [value]="'valor_1'">valor_1</option>
+                    <option [value]="'valor_2'">valor_2</option>
+                </datalist>
+            
+
+            </div>
+        </div>
+        <div class="start-drive">
+            <button class="button-start">Start Drive</button>
+        </div>
+    </div>
+
+    <!-- Camping -->
+    <div *ngIf="campingBarIsActive" class="camping-bar">
+        <div class="camping-filters">
+            <div class="camping-category">
+                <div class="camping-categories"
+                     *ngFor="let category of campingsIcons"
+                     [ngClass]="{'selected-mode': category.selected }"
+                     (click)="category.selected = !category.selected; showCamping()">
+                    <img src="{{category.src}}" title="{{category.category}}"> {{category.category}}
+                </div>
+            </div>
+            <div class="camping-services">
+                <label>teste</label>
+                <div class="camping-service"
+                     [ngClass]="{'selected-mode': service.selected }"
+                     *ngFor="let service of campingServices"
+                     (click)="service.selected = !service.selected; showCamping()">
+                     <img src="{{service.src}}" title="{{service.title}}" width="24px"> {{service.title}}
+                </div>    
+            </div>
+        </div>
+        <div class="camping-info">
+            <button (click)="cleanMemory()">Clean All Campings</button>
+            <!-- Vai tomá no cú!  -->
+            <!-- {{campingFiltering ? 'Filtering...':''}} -->
+            <!-- <div class="camping-info">
+                <nb-card [nbSpinner]="true" nbSpinnerStatus="basic">
+                    <nb-card-body>
+                    </nb-card-body>
+                </nb-card>
+            </div> -->
+        </div>
+    </div>
+
+    <div #mapElement class="map"></div>
+</div>

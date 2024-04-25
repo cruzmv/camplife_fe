@@ -6,25 +6,15 @@
              (click)="topMenu()"></nb-icon> 
 
     <div *ngIf="topMenuBarStatus"  class="top-info">
-        <div class="memory-info">
+        <!-- <div class="memory-info">
             <label #memoryStatus></label>
-        </div>
+        </div> -->
         <div class="center-info-left">
             {{dateTimeDisplay}}
         </div>
         <div class="center-info-right">
-            <!-- <input type="text" > -->
-            <!-- <select class="search-input">
-                <option value="" disabled selected>...</option>
-            </select> -->
-            <input list="options" 
-                   class="search-input" 
-                   (ngModel)="selectedSearchOption" 
-                   (keydown)="search_place($event)"
-                   (change)="searchOptionSelected($event)">
-            <datalist id="options">
-              <option *ngFor="let option of search_options" [value]="option.value">{{ option.label }}</option>
-            </datalist>
+            <label class="route-label-1">{{routeDistanceText}}</label><br/>
+            <label class="route-label-2">{{roteGuideText}}</label><br/>
         </div>
         <div>
             <nb-icon icon="arrowhead-up-outline" (click)="topMenu()"></nb-icon> 
@@ -46,8 +36,6 @@
             <div class="status">
                 <img #iconWiFi src="assets/wifi-off-outline.svg" class="status_icon">
                 <img #iconGps src="assets/compass-outline.svg" class="status_icon">
-                <input type="checkbox" id="rotateCheck" checked (change)="rotateOption = !rotateOption; geolocation.setTracking(rotateOption);">
-                <label for="rotateCheck">Rotate</label>
             </div>
     
             <nb-icon icon="skip-forward-outline" style="font-size: 2.25rem;" (click)="rightToolBar()"></nb-icon>
@@ -101,9 +89,29 @@
             <button #btnDebug (click)="windowDebug()" style="font-weight: bolder;">Debug [{{debugWindow?'ON':'OFF'}}]</button>
         </div>
 
+        <div>
+            <input type="checkbox" id="rotateCheck" checked (change)="rotateOption = !rotateOption; geolocation.setTracking(rotateOption);">
+            <label for="rotateCheck">Rotate</label>
+    
+            <input #emulateCheckElement type="checkbox" id="emulateCheck" (change)="emulate()">
+            <label for="emulateCheck">Emulate</label>
+    
+            <input type="checkbox" id="autoZoomCheck" checked (change)="autoZoomCheck = !autoZoomCheck">
+            <label for="autoZoomCheck">AutoZoom</label>
+        </div>
+
     </div>
 
     <div *ngIf="routeToolbar" class="route-toolbar">
+        <input list="options" 
+                class="search-input" 
+                (ngModel)="selectedSearchOption" 
+                (keydown)="search_place($event)"
+                (change)="searchOptionSelected($event)">
+        <datalist id="options">
+        <option *ngFor="let option of search_options" [value]="option.value">{{ option.label }}</option>
+        </datalist>
+
         <input #roteFrom type="text" nbInput fullWidth status="basic" placeholder="From">
         <input #roteTo type="text" nbInput fullWidth status="basic" placeholder="To">
 
@@ -183,6 +191,11 @@
     <div *ngIf="youtubeWindow" class="youtube-window">
         <youtube-player #my_youtubePlayer [videoId]="youtubeVideoId" [width]="533" [height]="329"></youtube-player>
         <input #youtubeInput type="text" (input)="updateYoutube($event)" class="youtube-input">
+    </div>
+
+
+    <div class="memory-info">
+        <label #memoryStatus></label>
     </div>
 
     <div #mapElement class="map"></div>

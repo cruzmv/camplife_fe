@@ -14,15 +14,16 @@ import { ImageViewerComponent } from './components/image-viewer/image-viewer.com
 
 import { MapComponent } from './components/map/map.component';
 import { YouTubePlayerModule } from '@angular/youtube-player';
+import { MapsComponent } from './components/maps/maps.component';
 
 
 @NgModule({
   declarations: [
     AppComponent,
-    //MapsComponent,
     DashboardComponent,
     ImageViewerComponent,
-    MapComponent
+    MapComponent,
+    MapsComponent,
   ],
   imports: [
     BrowserModule,

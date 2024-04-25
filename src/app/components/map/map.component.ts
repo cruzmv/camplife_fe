@@ -26,6 +26,7 @@ import * as polyline from '@mapbox/polyline';
 import { v4 as uuidv4 } from 'uuid';
 import { Geolocation } from 'ol';
 import { YouTubePlayer } from '@angular/youtube-player';
+import { emulate_rote } from './emulate';
 //#endregion imports
 
 //declare var YT: any;
@@ -74,6 +75,7 @@ export class MapComponent implements AfterViewInit, OnInit {
   @ViewChild('btnShowCruiser') btnShowCruiser!: ElementRef;
   @ViewChild('youtubeInput') youtubeInput!: ElementRef;
   @ViewChild('my_youtubePlayer') my_youtubePlayer!: YouTubePlayer;
+  @ViewChild('emulateCheckElement') emulateCheckElement!: ElementRef;
 
   map: Map = new Map({
     controls: []
@@ -92,7 +94,7 @@ export class MapComponent implements AfterViewInit, OnInit {
   places: any[] = [];
   place: any;
   tooltipOverlay!: Overlay;
-  apiEndPoint = 'http://cruzmv.ddns.net:3000/';
+  apiEndPoint = 'http://cruzmv.ddns.net:3000/';   //'http://localhost:3000/';
   watchGeoId: any;
   myRote: any = {};
   radioPlaying: boolean = false;
@@ -114,7 +116,7 @@ export class MapComponent implements AfterViewInit, OnInit {
     { category: 'PARKING LOT DAY/NIGHT', src: 'assets/PARKING_LOT_DAY_NIGHT.png' },
     { category: 'EXTRA SERVICES', src: 'assets/EXTRA_SERVICES.png' },
     { category: 'CAMPING', src: 'assets/CAMPING.png' },
-    { category: 'PRIVATE CAR PARK FOR CAMPERS', src: 'assets/PAYING_MOTORHOME_AREA.png' },
+    { category: 'PRIVATE CAR PARK', src: 'assets/PAYING_MOTORHOME_AREA.png' },
     { category: 'PAYING MOTORHOME AREA', src: 'assets/PAYING_MOTORHOME_AREA.png' },
     { category: 'ON THE FARM', src: 'assets/ON_THE_FARM.png' },
     { category: 'SURROUNDED BY NATURE', src: 'assets/SURROUNDED_BY_NATURE.png' },
@@ -134,6 +136,93 @@ export class MapComponent implements AfterViewInit, OnInit {
   topMenuBarStatus: boolean = true;
   rotateOption: boolean = true;
   driving: boolean = false;
+  roteGuideText: string = '';
+  routeDistanceText: string = '';
+  testRoute: any = emulate_rote;
+  // testRoute = [
+  //   [-7.502703988935648,40.13576765094939],
+  //   [-7.502428241321606,40.135778753881254],
+  //   [-7.502199661107832,40.135792632600754],
+  //   [-7.502130724092209,40.13574128133587],
+  //   [-7.502203831925979,40.135658551955714],
+  //   [-7.5022927612269825,40.13554020373189],
+  //   [-7.502414595126816,40.135385050751125],
+  //   [ -7.502513727054246,40.13527042258943],
+  //   [-7.502519780826257,40.13515810986874],
+  //   [-7.502512636440126,40.135015836732094],
+  //   [-7.502533347711295,40.13482253878826],
+  //   [-7.502603992780819,40.13470860473117],
+  //   [-7.502707372019121,40.13470614850098],
+  //   [-7.50294037517497,40.134770992431555],
+  //   [-7.5030585228834425,40.13481962531864],
+  //   [-7.503192723191775,40.134872188081346],
+  //   [-7.503368018401236,40.134956190195766],
+  //   [-7.503487450398117,40.13502250759072],
+  //   [-7.503619724432557,40.13512370286597],
+  //   [-7.503782819642846,40.13523914389046],
+  //   [-7.503911483163234,40.13534252159221],
+  //   [-7.50400202025816,40.135444698880434],
+  //   [-7.50400651505596,40.13555178840957],
+  //   [-7.5039301043399105,40.13561810520309],
+  //   [-7.504023209852929,40.13569866773551],
+  //   [-7.504186947154516,40.13560975418429],
+  //   [-7.504285972348208,40.13551631175858],
+  //   [-7.504332204059068,40.13545245104888],
+  //   [-7.504495299163541,40.135408239718856],
+  //   [-7.505440900488386,40.13529330095383],
+  //   [-7.506441917120752,40.13485547728172],
+  //   [-7.506292540580832,40.134063457728956],
+  //   [-7.5072571037787466,40.133279656138114],
+  //   [-7.50910439580145,40.13243556512228],
+  //   [-7.509832184415669,40.13295621749586],
+  //   [-7.510559846075176,40.13433252021423],
+  //   [-7.512442526854603,40.13193129104579],
+  //   [-7.513746199617997,40.1305611100579],
+  //   [-7.515407686872976,40.1293056969719],
+  //   [-7.515978615729875,40.12887415678688],
+  //   [-7.522227348363116,40.12863776238834],
+  //   [-7.523685067166183,40.12750906906771],
+  //   [-7.527133727244376,40.12656086412758 ],
+  //   [-7.5293839609090005,40.12618760333831],
+  //   [-7.53319789407066,40.126023319141154],
+  //   [-7.5355598555376755,40.126032221193896 ],
+  //   [-7.537782642845269,40.12494734441157],
+  //   [-7.539431410881245,40.123289145919244],
+  //   [-7.540772997844409,40.121811193599825 ],
+  //   [-7.546872521521018,40.12195191206084 ],
+  //   [-7.548117959412486,40.12398032654755 ],
+  //   [-7.552999072363106,40.1220472968769 ],
+  //   [-7.557255260335714,40.12292770573481 ],
+  //   [-7.561224788305771,40.12205209067139 ],
+  //   [-7.562870292560363,40.12185140766451 ],
+  //   [-7.563486759248497,40.12226572026648],
+  //   [-7.563541750439173,40.122618531255256 ],
+  //   [-7.563968989662996,40.1226314783662 ],
+  //   [-7.564265095538097,40.12297781406875 ],
+  //   [-7.565276086543435,40.12370608404569 ],
+  //   [-7.570162477575229,40.12434509845403],
+  //   [-7.572341424733875,40.125923902265896 ],
+  //   [-7.575001743589653,40.12663066686008 ],
+  //   [-7.576592256392158,40.126122518865344 ],
+  //   [-7.57780629187427,40.12562084034258 ],
+  //   [-7.577937021876058,40.12533807035891 ],
+  //   [-7.577994883758389,40.12492658813528],
+  //   [-7.578083378715396,40.124520312136724 ],
+  //   [-7.578194781238632,40.12445235070015],
+  //   [-7.578223389239698,40.124336820584034],
+  //   [-7.578096919257642,40.12397958793494 ],
+  //   [-7.578132352691337,40.12362041886047 ],
+  //   [-7.5780559841366655,40.1235547717867 ],
+  //   [-7.578007841693404,40.123539433139854],
+  //   [-7.577911183477084,40.12353244968975 ]
+  // ]
+  testRouteIndex = 0;
+  emulateCheck: boolean = false;
+  autoZoomCheck: boolean = true;
+  private stepsState: any[] = [];
+  private timeoutsEmula: NodeJS.Timeout[] = [];
+  private distanceCheckTime = 0;
+
 
   //apiLoaded = false;
 
@@ -173,6 +262,12 @@ export class MapComponent implements AfterViewInit, OnInit {
       }, 500);
     }
 
+    const emulate: any = localStorage.getItem("emulate");
+    if (emulate) {
+      this.emulateCheck = JSON.parse(emulate);
+      this.emulateCheckElement.nativeElement.checked = this.emulateCheck;
+    }
+
     const event = {
       currentTarget: {
         id: "googleselect",
@@ -189,7 +284,7 @@ export class MapComponent implements AfterViewInit, OnInit {
     // }
 
     setInterval( ()=>{
-      if (window.performance && (window.performance as any).memory) {
+      if (window.performance && (window.performance as any).memory && this.memoryStatus) {
         this.memoryStatus.nativeElement.innerHTML = `jsHeapSizeLimit: ${ (window.performance as any).memory.jsHeapSizeLimit.toLocaleString('en-US') } <br/>
                                                      totalJSHeapSize: ${ (window.performance as any).memory.totalJSHeapSize.toLocaleString('en-US') } <br/>
                                                      usedJSHeapSize: ${ (window.performance as any).memory.usedJSHeapSize.toLocaleString('en-US') }`
@@ -202,7 +297,7 @@ export class MapComponent implements AfterViewInit, OnInit {
 
       if (this.driving){
         const coords: any = this.map.getView().getCenter();
-        const coordinates: any = this.bing2GooglePosition(coords[0],coords[1]);
+        let coordinates: any = this.bing2GooglePosition(coords[0],coords[1]);
         this.checkDistanceToSteps(coordinates);
       }
 
@@ -467,12 +562,50 @@ export class MapComponent implements AfterViewInit, OnInit {
     this.cleanMap();
   }
 
+
+  startDrive() {
+    this.routeToolbar = !this.routeToolbar;
+    if (this.roteZoom)
+      this.map.getView().setZoom(this.roteZoom.nativeElement.value);
+
+    this.updateTrackingStatus();
+    this.driving = true;
+
+    // Clear previous timeouts
+    this.clearTimeoutsEmu();
+
+    if (this.emulateCheck) {
+        let someElapsTime = 0;
+
+
+        this.testRoute.filter((x:any) => x.drove == undefined).forEach((geo: any) => {
+            if (geo.elapstime) {
+                someElapsTime += parseInt(geo.elapstime);
+              }
+              const timeout = setTimeout(() => this.handleInterval(geo), someElapsTime);
+              this.timeoutsEmula.push(timeout);
+        });
+    }
+  }
+
+  /*
   startDrive() {
     this.routeToolbar = !this.routeToolbar;
     this.map.getView().setZoom(this.roteZoom.nativeElement.value);
     this.updateTrackingStatus();
     this.driving = true;
+
+    if (this.emulateCheck) {
+      let someElapsTime = 0
+      this.testRoute.forEach((geo:any) => {
+        if (geo.elapstime) {
+          someElapsTime += parseInt(geo.elapstime);
+        }
+        setTimeout(() => this.handleInterval(geo), someElapsTime);
+      });
+    }
   }
+  */
 
   cacheRote(){
 
@@ -535,8 +668,9 @@ export class MapComponent implements AfterViewInit, OnInit {
 
         setTimeout(() => {
 
-          this.roteFrom.nativeElement.value = from_coordinates_google;
-          this.roteTo.nativeElement.value = to_coordinates_google;
+          if (this.roteFrom)
+            this.roteFrom.nativeElement.value = from_coordinates_google;
+            this.roteTo.nativeElement.value = to_coordinates_google;
 
         }, 500);
         this.calculateRoute(from_coordinates_google,to_coordinates_google);
@@ -589,8 +723,14 @@ export class MapComponent implements AfterViewInit, OnInit {
   rightToolBar(){
     this.rigthToolbarStatus = !this.rigthToolbarStatus;
   }
+  
   topMenu(){
     this.topMenuBarStatus = !this.topMenuBarStatus;
+  }
+  
+  emulate(){
+    this.emulateCheck = !this.emulateCheck;
+    localStorage.setItem("emulate",JSON.stringify(this.emulateCheck))
   }
   //#endregion publics
 
@@ -627,20 +767,85 @@ export class MapComponent implements AfterViewInit, OnInit {
         maximumAge: 0   // No maximum age for cached positions
       };
 
-      const watchGeoId = navigator.geolocation.watchPosition(
-        (position) => {
-          const coordinates: any = [position.coords.longitude, position.coords.latitude];
-          this.recordGeoPosition(coordinates);
-          this.centerAndZoomToLocation(coordinates); // Change zoom level as needed
-          navigator.geolocation.clearWatch(watchGeoId);
-          this.gpsStatus = true;
-        },
-        (error) => {
-          this.logDebug(`GetPosition Error: ${JSON.stringify(error)}`);
-          this.gpsStatus = false;
-        },
-        options
-      );
+      if (this.emulateCheck) {
+        // simulate a move every 5 secounds
+        const coordinates: any = [this.testRoute[this.testRouteIndex]['lat'],this.testRoute[this.testRouteIndex]['long']];
+        this.recordGeoPosition(coordinates);
+        this.centerAndZoomToLocation(coordinates); // Change zoom level as needed
+        this.gpsStatus = true;
+
+        // let someElapsTime = 0
+        // this.testRoute.forEach((geo:any) => {
+        //   if (geo.elapstime) {
+        //     someElapsTime += parseInt(geo.elapstime);
+        //   }
+        //   setTimeout(() => this.handleInterval(geo), someElapsTime);
+        // });
+
+
+        // this.testRoute((geo: any) => {
+        //   setTimeout( this.handleInterval(geo) ,geo.elapstime)          
+        // });
+
+
+
+        /*
+        setInterval(()=>{
+          if (this.driving) {
+            const coordinates: any = [this.testRoute[this.testRouteIndex]['lat'],this.testRoute[this.testRouteIndex]['long']];
+            this.recordGeoPosition(coordinates);
+            this.centerAndZoomToLocation(coordinates); // Change zoom level as needed
+            this.gpsStatus = true;
+            this.testRouteIndex++;  
+            if (this.testRouteIndex >= this.testRoute.length){
+              this.testRouteIndex = 0;
+            }
+          }
+        },2500);
+        */
+        /*
+        setInterval(() => {
+          if (this.driving) {
+              // const coordinates: any = [this.testRoute[this.testRouteIndex]['lat'], this.testRoute[this.testRouteIndex]['long']];
+              // this.recordGeoPosition(coordinates);
+              // this.centerAndZoomToLocation(coordinates); // Change zoom level as needed
+              // this.gpsStatus = true;
+              // this.testRouteIndex++;
+      
+              // // Reset the index if it exceeds the length of the testRoute array
+              // if (this.testRouteIndex >= this.testRoute.length) {
+              //     this.testRouteIndex = 0;
+              // }
+      
+              // Calculate the interval time based on the elapstime value
+              const elapstime = this.testRoute[this.testRouteIndex]['elapstime'];
+              const intervalTime = elapstime ? parseInt(elapstime) : 1000; // Convert elapstime to milliseconds
+      
+              // Clear the previous interval and set a new one with the calculated interval time
+              clearInterval(this.intervalId);
+              this.intervalId = setInterval(() => {
+                  this.handleInterval();
+              }, intervalTime);
+          }
+        }, 1000);   
+        */    
+
+      } else {
+        const watchGeoId = navigator.geolocation.watchPosition(
+          (position) => {
+            const coordinates: any = [position.coords.longitude, position.coords.latitude];
+            this.recordGeoPosition(coordinates);
+            this.centerAndZoomToLocation(coordinates); // Change zoom level as needed
+            navigator.geolocation.clearWatch(watchGeoId);
+            this.gpsStatus = true;
+          },
+          (error) => {
+            this.logDebug(`GetPosition Error: ${JSON.stringify(error)}`);
+            this.gpsStatus = false;
+          },
+          options
+        );          
+      }
     }, 1000);
 
     // Create and add an overlay to the map for displaying tooltips
@@ -761,6 +966,21 @@ export class MapComponent implements AfterViewInit, OnInit {
 
   }
 
+  private handleInterval(geo: any) {
+    const coordinates: any = [geo.lat,geo.long];   //[this.testRoute[this.testRouteIndex]['lat'], this.testRoute[this.testRouteIndex]['long']];
+    this.recordGeoPosition(coordinates);
+    this.centerAndZoomToLocation(coordinates);
+    this.gpsStatus = true;
+    this.testRouteIndex++;
+
+    console.log(geo.elapstime);
+
+    // Reset the index if it exceeds the length of the testRoute array
+    if (this.testRouteIndex >= this.testRoute.length) {
+        this.testRouteIndex = 0;
+    }
+  }  
+
   private startWatchingPosition() {
     if ('geolocation' in navigator) {
       const options = {
@@ -773,7 +993,10 @@ export class MapComponent implements AfterViewInit, OnInit {
         (position) => {
           const coordinates: any = [position.coords.longitude, position.coords.latitude];
           this.recordGeoPosition(coordinates);
-          this.centerAndZoomToLocation(coordinates); // Change zoom level as needed
+          if (!this.emulateCheck) {
+            this.centerAndZoomToLocation(coordinates); // Change zoom level as needed
+          }
+
           this.gpsStatus = true;
         },
         (error) => {
@@ -832,6 +1055,11 @@ export class MapComponent implements AfterViewInit, OnInit {
       }
     }
   }
+
+  private clearTimeoutsEmu() {
+    this.timeoutsEmula.forEach(timeout => clearTimeout(timeout));
+    this.timeoutsEmula = [];
+}  
 
   private centerAndZoomToLocation(coordinates: [number, number]): void {
     const bingCoordinates = this.google2BingPosition(coordinates[1], coordinates[0]);
@@ -1065,7 +1293,6 @@ export class MapComponent implements AfterViewInit, OnInit {
   //   }
   // }
 
-
   private decodePolyline(polyline: string): number[][] {
     const coordinates: number[][] = [];
     let index = 0;
@@ -1106,8 +1333,6 @@ export class MapComponent implements AfterViewInit, OnInit {
     return coordinates;
   }
 
-
-
   private calculateDistance(point1: any, point2: any) {
     const lat1 = point1[1];
     const lon1 = point1[0];
@@ -1130,46 +1355,21 @@ export class MapComponent implements AfterViewInit, OnInit {
     return distance * 1000; // Distance in meters
   }
 
-
-
   private checkDistanceToSteps(currentPosition: any) {
-    const polyline = this.myRote.rote.routes[0].geometry;
-
-    // Decode the polyline string to get the coordinates
-    const coordinates = this.decodePolyline(polyline);
-    let logFirstDistance = true;
-    this.logDebug(`...${this.myRote.rote.routes[0].segments[0].steps.length}`);
-    this.myRote.rote.routes[0].segments[0].steps.forEach((step: any) => {
-        if (step.done_1 == undefined || step.done_2 == undefined || step.done_3 == undefined){
-          const startPointIndex = step.way_points[0];
-          const endPointIndex = step.way_points[1];
-  
-          const startPoint = coordinates[startPointIndex];
-          const endPoint = coordinates[endPointIndex];
-  
-          const distanceToStep = this.calculateDistance(currentPosition, startPoint);
-          if (logFirstDistance){
-            this.logDebug(`${step.instruction} in ${distanceToStep} meters`);
-            logFirstDistance = false;
-          }
-  
-          // Trigger warning message when the distance is less than a specified value (e.g., 20 meters)
-          const warn = `${step.instruction} in ${Math.round(distanceToStep)} meters`;
-          if (distanceToStep <= 500 && step.done_1 == undefined) {
-            this.speak(warn);
-            step.done_1 = true;
-          }
-          if (distanceToStep <= 250 && step.done_2 == undefined) {
-            this.speak(warn);
-            step.done_2 = true;
-          }
-          if (distanceToStep <= 65 && step.done_3 == undefined) {
-            this.speak(warn);
-            step.done_3 = true;
-          }
-        }
-
-    });
+    if (this.stepsState.length === 0) {
+      this.initializeStepsState();
+    }
+    const stepIndex = this.stepsState.findIndex(step => step.status === 'TODO' || step.status === 'DOING');
+    if (stepIndex === -1) {
+      // All steps are DONE
+      return;
+    }
+    this.updateStepState(stepIndex, currentPosition);
+    // if (this.checkForRouteDeviation(currentPosition, stepIndex)) {
+    //   //this.reRoute(); // Trigger re-route method
+    //   this.logDebug(`RE-ROUTE>.......`);
+    // }
+    this.roteGuideText = `[${Math.round(this.stepsState[stepIndex].lastDistance)} meters] ${this.myRote.rote.routes[0].segments[0].steps[stepIndex].instruction}`;
   }
 
   private speak(text: string) {
@@ -1185,8 +1385,7 @@ export class MapComponent implements AfterViewInit, OnInit {
     } else {
         console.error('Speech synthesis is not supported by your browser.');
     }
-}  
-
+  }
 
   private drawRoteOption(geoRote: [[number,number],[number,number]], driveMode: string, avoide: any,vehicleType: string, roteZoom: string) {
 
@@ -1226,6 +1425,13 @@ export class MapComponent implements AfterViewInit, OnInit {
 
     this.httpClient.post(postUrl, body, {headers: header} ).subscribe((response: any)=>{
       this.myRote.rote = response;
+
+      this.updateRouteDistanceText();
+      // this.routeDistanceText = `Distance: ${this.myRote.rote.routes[0].summary.distance.toFixed(2)} ` +
+      // ` Duration: ${String(Math.floor(this.myRote.rote.routes[0].summary.distance / 60)).padStart(2,'0')}:${String(parseInt((this.myRote.rote.routes[0].summary.distance % 60 as any)) ).padStart(2,'0')} `;
+
+      // this.roteGuideText = `[${Math.round(this.myRote.rote.routes[0].segments[0].steps[0].distance)} meters] ${this.myRote.rote.routes[0].segments[0].steps[0].instruction}`;
+
       const polylineString = response.routes[0].geometry;
       const routeCoordinates = polyline.decode(polylineString).map(coords => [coords[1], coords[0]]);
       const routeFeature: any = new Feature({
@@ -1247,6 +1453,44 @@ export class MapComponent implements AfterViewInit, OnInit {
     }, (error: any) => {
       this.logDebug(error.error.error.message);
     })
+  }
+
+  private updateRouteDistanceText() {
+
+    this.routeDistanceText = `Distance: ${this.myRote.rote.routes[0].summary.distance.toFixed(2)} ` +
+    ` Duration: ${String(Math.floor(this.myRote.rote.routes[0].summary.distance / 60)).padStart(2,'0')}:${String(parseInt((this.myRote.rote.routes[0].summary.distance % 60 as any)) ).padStart(2,'0')} `;
+
+    this.roteGuideText = `[${Math.round(this.myRote.rote.routes[0].segments[0].steps[0].distance)} meters] ${this.myRote.rote.routes[0].segments[0].steps[0].instruction}`;
+
+
+    // const totalDuration = this.myRote.rote.routes[0].summary.duration;
+    // const totalHours = Math.floor(totalDuration / 60);
+    // const totalMinutes: any = totalDuration % 60;
+    // const now = new Date();
+    // const currentHours = now.getHours();
+    // const currentMinutes = now.getMinutes();
+    
+    // let etaHours = currentHours + totalHours;
+    // let etaMinutes = currentMinutes + totalMinutes;
+    
+    // // Adjust ETA if it exceeds 60 minutes
+    // if (etaMinutes >= 60) {
+    //   etaMinutes -= 60;
+    //   etaHours++;
+    // }
+    
+    // // Adjust ETA if it exceeds 24 hours
+    // if (etaHours >= 24) {
+    //   etaHours -= 24;
+    // }
+    // const etaString = `${String(etaHours).padStart(2, '0')}:${String(etaMinutes).padStart(2, '0')}`;
+
+    // this.routeDistanceText = `Distance: ${totalDuration.toFixed(2)} ` +
+    // `Duration: ${String(totalHours).padStart(2, '0')}:${String(parseInt((totalMinutes))).padStart(2, '0')} ` +
+    // `ETA: ${etaString}`;
+
+    // // this.routeDistanceText = `Distance: ${this.myRote.rote.routes[0].summary.distance.toFixed(2)} ` +
+    // // ` Duration: ${String(Math.floor(this.myRote.rote.routes[0].summary.distance / 60)).padStart(2,'0')}:${String(parseInt((this.myRote.rote.routes[0].summary.distance % 60 as any)) ).padStart(2,'0')} `;
   }
 
   private calculateRoute(start: [number, number], end: [number, number]) {
@@ -1335,9 +1579,12 @@ export class MapComponent implements AfterViewInit, OnInit {
 
     const pointStyle = new Style({
       image: new CircleStyle({
-        radius: 6,
+        radius: (options.name == 'dotFeature' ? 12 : 6),
         fill: new Fill({ color: options.color }), // Set the fill color to blue
-        stroke: new Stroke({ color: 'white', width: 1 }) // Set the border color and width
+        stroke: new Stroke({ 
+          color: 'rgba(255, 255, 255, 0.7)',  // Set the border color to white with 70% opacity
+          width: (options.name == 'dotFeature' ? 10 : 1) // Set the border width
+        })
       })
     });
 
@@ -1380,6 +1627,219 @@ export class MapComponent implements AfterViewInit, OnInit {
     })
   }
 
+
+  private initializeStepsState() {
+    if (this.myRote.rote) {
+      const steps = this.myRote.rote.routes[0].segments[0].steps;
+      this.stepsState = steps.map(() => ({
+        status: 'TODO',
+        lastWarn: false,
+        secoundWarn: false,
+        firstWarn: false,
+        lastDistance: 0,
+        distanceHistory: []
+      }));
+    }
+  }
+
+  private updateStepState(stepIndex: number, currentPosition: any) {
+    const step = this.myRote.rote.routes[0].segments[0].steps[stepIndex];
+    const currentDestinationPosition = this.decodePolyline(this.myRote.rote.routes[0].geometry)[step.way_points[0]];
+    const currentDistanceToStep = this.calculateDistance(currentPosition, currentDestinationPosition);
+    
+    let distanceDone: any = 0;
+    for (let i = 0; i < this.myRote.rote.routes[0].segments[0].steps.length; i++) { 
+      const step: any = this.myRote.rote.routes[0].segments[0].steps[i];
+      if (this.stepsState[i].status == 'DONE') {
+        distanceDone += step.distance;
+      }
+    }
+    const distanceTodo = this.myRote.rote.routes[0].summary.distance - distanceDone;
+
+    this.routeDistanceText = `Distance: ${distanceTodo.toFixed(2)} ` +
+                             ` Duration: ${String(Math.floor(distanceTodo / 60)).padStart(2,'0')}:${String(parseInt((distanceTodo % 60 as any)) ).padStart(2,'0')} `;
+
+
+
+
+    //console.log(`stepIndex: ${stepIndex}, currentDistanceToStep: ${currentDistanceToStep}, currentPosition: ${currentPosition} checkStepCompletion: ${this.checkStepCompletion(stepIndex)}`);
+
+
+    // if (this.stepsState[stepIndex].distanceHistory.indexOf(currentDistanceToStep) < 0 ) {
+    //   console.log(`<0: ${this.stepsState[stepIndex].distanceHistory.indexOf(currentDistanceToStep)}`)
+    //   this.stepsState[stepIndex].distanceHistory.push(currentDistanceToStep);
+    // }
+    this.stepsState[stepIndex].distanceHistory.push(currentDistanceToStep);
+    
+    this.testRoute[this.distanceCheckTime]['drove'] = true;
+
+    // Off-route check
+    if (this.checkOffRoute(currentPosition) && this.distanceCheckTime > 1) {
+      //this.speak('You are off-route. Please return to the designated path.');
+      //this.logDebug('Off-route detected');
+      console.log('Off-route detected');
+      this.driving = false;
+      this.clearTimeoutsEmu();
+      this.addRoute();
+      this.drawRote();
+      this.startDrive();
+
+      return;
+    }
+
+    this.distanceCheckTime ++;
+
+    if (this.checkStepCompletion(stepIndex)) {
+      this.stepsState[stepIndex].status = 'DONE';
+    } else if (this.stepsState[stepIndex].status === 'TODO' || this.stepsState[stepIndex].status === 'DOING') {
+      this.stepsState[stepIndex].status = 'DOING';
+      if (!this.stepsState[stepIndex].lastWarn && currentDistanceToStep <= 50) {
+        this.speak(`${step.instruction}`);
+        this.stepsState[stepIndex].lastWarn = true;
+        this.logDebug(`Warn at 50mt`);
+      } else if (!this.stepsState[stepIndex].lastWarn && !this.stepsState[stepIndex].secoundWarn && currentDistanceToStep <= 250) {
+        this.speak(`${step.instruction} in ${Math.round(currentDistanceToStep)} meters`);
+        this.stepsState[stepIndex].secoundWarn = true;
+        this.logDebug(`Warn at 250mt`);
+      } else if (!this.stepsState[stepIndex].lastWarn && !this.stepsState[stepIndex].secoundWarn && !this.stepsState[stepIndex].firstWarn && currentDistanceToStep <= 500) { 
+        this.logDebug(`<500: ${currentDistanceToStep}`);
+        this.speak(`${step.instruction} in ${Math.round(currentDistanceToStep)} meters`);
+        this.stepsState[stepIndex].firstWarn = true;
+        this.logDebug(`Warn at 500mt`);
+      }
+    }
+
+    if (this.autoZoomCheck) {
+      if (currentDistanceToStep > 1500) {
+        this.map.getView().setZoom(14);
+      } else if (currentDistanceToStep > 500) { 
+        this.map.getView().setZoom(18);
+      } else if (currentDistanceToStep < 250) {
+        this.map.getView().setZoom(20);
+      }
+    }
+
+    this.stepsState[stepIndex].lastDistance = currentDistanceToStep;
+
+
+    /*
+
+    if (this.stepsState[stepIndex].distanceHistory.indexOf(currentDistanceToStep) < 0 ) {
+      console.log(`<0: ${this.stepsState[stepIndex].distanceHistory.indexOf(currentDistanceToStep)}`)
+      this.stepsState[stepIndex].distanceHistory.push(currentDistanceToStep);
+    }
+
+    if (this.checkStepCompletion(stepIndex)) {
+      this.stepsState[stepIndex].status = 'DONE';
+    } else if (this.stepsState[stepIndex].status === 'TODO' || this.stepsState[stepIndex].status === 'DOING') {
+      this.stepsState[stepIndex].status = 'DOING';
+      
+      if (!this.stepsState[stepIndex].lastWarn && currentDistanceToStep <= 50) {
+        console.log(`<50: ${currentDistanceToStep}`);
+        this.speak(`${step.instruction}`);
+        this.stepsState[stepIndex].lastWarn = true;
+      } else if (!this.stepsState[stepIndex].lastWarn && !this.stepsState[stepIndex].secoundWarn && currentDistanceToStep <= 250) {
+        console.log(`<250: ${currentDistanceToStep}`);
+        this.speak(`${step.instruction} in ${Math.round(currentDistanceToStep)} meters`);
+        this.stepsState[stepIndex].secoundWarn = true;
+      } else if (!this.stepsState[stepIndex].lastWarn && !this.stepsState[stepIndex].secoundWarn && !this.stepsState[stepIndex].firstWarn && currentDistanceToStep <= 500) {
+        console.log(`<500: ${currentDistanceToStep}`);
+        this.speak(`${step.instruction} in ${Math.round(currentDistanceToStep)} meters`);
+        this.stepsState[stepIndex].firstWarn = true;
+      } 
+    }
+
+
+    */
+  }    
+
+    /*
+    this.myRote.rote.routes[0].segments[0].steps.forEach((step: any) => {
+        if (step.done_1 == undefined || step.done_2 == undefined || step.done_3 == undefined){
+          const startPointIndex = step.way_points[0];
+          const endPointIndex = step.way_points[1];
+  
+          const startPoint = coordinates[startPointIndex];
+          const endPoint = coordinates[endPointIndex];
+  
+          const distanceToStep = this.calculateDistance(currentPosition, startPoint);
+          if (logFirstDistance){
+            this.logDebug(`${step.instruction} in ${distanceToStep} meters`);
+            logFirstDistance = false;
+          }
+  
+          // Trigger warning message when the distance is less than a specified value (e.g., 20 meters)
+          const warnMessage = `${step.instruction} in ${Math.round(distanceToStep)} meters`;
+
+          if (step.done_3 == undefined && distanceToStep <= 60){
+            this.speak(warnMessage);
+            step.done_3 = true;
+          } else if (step.done_2 == undefined && this.myRote.rote.routes[0].summary.distance > 250 && distanceToStep <= 250) {
+            this.speak(warnMessage);
+            step.done_2 = true;            
+          } else if (step.done_1 == undefined && this.myRote.rote.routes[0].summary.distance > 500 && distanceToStep <= 500) {
+
+          }
+
+
+
+          if ( this.myRote.rote.routes[0].summary.distance > 500 && distanceToStep <= 500 && step.done_1 == undefined) {
+            this.speak(warnMessage);
+            step.done_1 = true;
+            this.roteGuideText = warnMessage;
+          }
+          if ( this.myRote.rote.routes[0].summary.distance > 250 && distanceToStep <= 250 && step.done_2 == undefined) {
+            this.speak(warnMessage);
+            step.done_2 = true;
+          }
+          if (distanceToStep <= 65 && step.done_3 == undefined) {
+            this.speak(warnMessage);
+            step.done_3 = true;
+          }
+        }
+
+    });
+    */
+
+    private checkOffRoute(currentPosition: any): boolean {
+      const routeCoordinates: any[] = this.decodePolyline(this.myRote.rote.routes[0].geometry);
+      
+      // Threshold distance in meters
+      const threshold = 25;
+  
+      for (const coord of routeCoordinates) {
+          const distance = this.calculateDistance(currentPosition, coord);
+          if (distance < threshold) {
+              return false;
+          }
+      }
+  
+      return true;
+  }
+
+  private checkStepCompletion(stepIndex: number): boolean {
+    const distances = this.stepsState[stepIndex].distanceHistory;
+    let previousDistance: number | undefined = undefined;
+    
+    for (let i = 0; i < distances.length; i++) {
+      if (previousDistance !== undefined) {
+        this.logDebug(`floating distance: ${Math.round(previousDistance - distances[i])}`);
+        if (Math.round(previousDistance - distances[i]) <= -7) {
+          //console.log(`previousDistance: ${previousDistance} - distances[i] ${distances[i]} === ${Math.round(previousDistance - distances[i])}`);
+          return true;
+        }
+      }
+      previousDistance = distances[i];
+    }
+    return false;
+  }
+
+  private checkForRouteDeviation(currentPosition: any, stepIndex: number): boolean {
+    const currentDestinationPosition = this.decodePolyline(this.myRote.rote.routes[0].geometry)[stepIndex > 0 ? this.myRote.rote.routes[0].segments[0].steps[stepIndex - 1].way_points[1] : 0];
+    const currentDistanceToDestination = this.calculateDistance(currentPosition, currentDestinationPosition);
+  
+    return currentDistanceToDestination > this.stepsState[stepIndex].lastDistance * 2; // Deviation threshold
+  }  
   //#endregion privates
 
 }
