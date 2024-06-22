@@ -1,0 +1,28 @@
+<div class="main">
+    <div class="categories" >
+        <div class="category" *ngFor="let category of categories" (click)="onCategorySelected(category.name)">
+            {{category.name}}
+        </div>
+    </div>
+
+    <div class="sub-categories" *ngIf="channels.length <= 0">
+        <div class="subCategory" *ngFor="let subCategory of subCategories" (click)="onSubCategorySelected(subCategory.groupTitle)">
+            {{subCategory.name}}
+        </div>
+    </div>
+    
+    <div class="channels" *ngIf="channels.length > 0">
+        <div class="channel" *ngFor="let channel of channels" (click)="playChannel(channel)">
+            <img src="{{channel.tvgLogo}}" width="150px" height="150px"><br/>
+            <label>{{channel.groupName}}</label>
+        </div>
+    </div>
+
+    <div class="subChannels" *ngIf="subChannels.length > 0">
+        <div class="subChannel" *ngFor="let subChannel of subChannels" (click)="playChannel({  channels: [ {url: subChannel.url} ]  })">
+            {{subChannel.tvgName}}
+        </div>
+    </div>
+</div>
+
+

@@ -47,6 +47,8 @@
     font-size: xx-large;
     font-weight: bolder;    
     width: 80%;
+    line-height: normal;
+    padding-left: 10px;
 }
 
 .corner-info {
@@ -134,10 +136,10 @@
     right: 70px;
     top: 70px;
     width: 30%;
-    height: 90%;
+    height: 80%;
     background-color: rgba(255, 255, 255, 0.6);
     border-radius: 2%;
-    z-index: 9000;
+    z-index: 1000;
     padding-top: 10px;
 }
 
@@ -200,6 +202,8 @@
     justify-content: space-around;
     align-items: stretch;
     padding-top: 10px;
+    max-height: 300px;
+    overflow: auto;
 }
 
 .route-poi {
@@ -230,13 +234,11 @@
     cursor: pointer;
 }
 
-.start-drive {
+.resume-route {
     display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-content: space-around;
-    justify-content: space-evenly;
-    align-items: stretch;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
     padding-top: 20px;
 }
 
@@ -259,7 +261,9 @@
     padding-top: 10px;
     display: flex;
     flex-direction: column;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    align-content: space-between;
+    justify-content: space-between;
 }
 
 .camping-filters {
@@ -300,3 +304,54 @@
     cursor: pointer;
 }
 
+::ng-deep nb-layout-column {
+    height: 80vw;
+}
+
+.search-option {
+    color: black;
+    font-weight: bolder;
+    z-index: 99999;
+}
+
+.mat-form {
+    width: 100%;
+}
+
+.drive-eta {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 400px;
+    height: 100px;
+    display: flex;
+    background-color: rgba(30, 60, 10, 0.9);
+    z-index: 9000;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    flex-direction: column;
+    align-items: center;
+    font-size: x-large;
+    font-weight: bold;    
+}
+
+.speed {
+    position: fixed;
+    bottom: 20px;
+    left: 90px;
+    width: 100px;
+    height: 100px;
+    background-color: rgb(47 49 17 / 90%);
+    border-style: solid;
+    z-index: 9000;
+    border-radius: 66px;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-content: center;
+    justify-content: center;
+    align-items: center;
+    font-size: xxx-large;
+    font-weight: 900;    
+}

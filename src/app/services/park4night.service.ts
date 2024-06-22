@@ -104,6 +104,8 @@ interface Park4NightData {
   providedIn: 'root'
 })
 export class Park4nightService {
+  //campLifeAPiUrl: string = 'http://cruzmv.ddns.net:3000/';
+  campLifeAPiUrl: string = 'http://localhost:3000/';
 
   constructor(private httpClient: HttpClient) { }
   
@@ -162,7 +164,7 @@ export class Park4nightService {
   }
 
   private getPark4NightPlaces(apiUrl: string): Observable<any> {
-    const url = `http://cruzmv.ddns.net:3000/proxy_park4night?url=${encodeURIComponent(apiUrl)}`;
+    const url = `${this.campLifeAPiUrl}proxy_park4night?url=${encodeURIComponent(apiUrl)}`;
     return this.httpClient.get(url);
   };
 

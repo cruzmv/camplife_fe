@@ -1,12 +1,12 @@
 <div class="map-container">
 
     <!-- Top bar info-->
-    <div class="topInfo">
+    <div *ngIf="driving" class="topInfo">
         <div class="guidance-icon">
-            <img src="assets/turn-left.png">
+            <img src={{iconGuidancePath}}>
         </div>
         <div class="guidance-text">
-            <label>In 500 meters Turn left at avenida da programação</label>
+            <label>{{textGuidance}}</label>
         </div>
         <div class="corner-info">
             {{mapZoomValue | number:'1.0-2' }}
@@ -80,7 +80,7 @@
                 <img src="assets/{{mode}}.png" 
                      title="{{mode}}" 
                      class="route-icons"
-                     (click)="choosedDriveMode = mode">
+                     (click)="choosedDriveMode = mode; drawRoute()">
             </div>
         </div>
         <hr>
@@ -91,7 +91,7 @@
                 <img src="assets/{{avoid}}.png" 
                      title="{{avoid}}" 
                      class="route-icons"
-                     (click)="setAvoid(avoid)">
+                     (click)="setAvoid(avoid); drawRoute()">
             </div>
         </div>
         <hr>
@@ -102,26 +102,42 @@
                 <img src="assets/{{type}}.png" 
                      title="{{type}}" 
                      class="route-icons"
-                     (click)="choosedTypeVehicle = type">
+                     (click)="choosedTypeVehicle = type; drawRoute()">
             </div>
         </div>
         <hr>
         <label class="route-label">Routes</label>
+
         <div #routePois class="route-pois">
             <div class="route-poi" id="location-from">
-                <!-- <input type="text" class="poi-input" value="Current Location"> -->
-                <input list="options" class="poi-input" value="Current Location">
-                <datalist id="options">
-                    <!-- <option *ngFor="let option of search_options" [value]="option.value">{{ option.label }}</option> -->
-                    <option [value]="'valor_1'">valor_1</option>
-                    <option [value]="'valor_2'">valor_2</option>
-                </datalist>
-            
-
+                <input type="text" class="poi-input" value="Current Location" disabled>
             </div>
         </div>
-        <div class="start-drive">
-            <button class="button-start">Start Drive</button>
+
+        <div class="resume-route">
+            <!-- <input list="browser" class="poi-input" (keydown)="searchPlace($event,false)" (change)="searchPlace($event, true)">
+            <datalist id="browser">
+                <option *ngFor="let option of placeSearchOptions" [value]="option.value">{{ option.label }}</option>
+            </datalist> -->
+            <mat-form-field class="mat-form">
+                <mat-label>Search</mat-label>
+                <input #mapSearchInput
+                       type="text"
+                       placeholder="Search"
+                       matInput
+                       [formControl]="mapSearchControl"
+                       [matAutocomplete]="auto"
+                       (input)="mapSearchFilter(false)"
+                       (focus)="mapSearchFilter(true)"
+                       (keydown.enter)="onSearchEnterKey()">
+                <mat-autocomplete requireSelection #auto="matAutocomplete">
+                  @for (option of mapFilteredOptions; track placeSearchOptions) {
+                    <mat-option [value]="option.label">{{option.label}}</mat-option>
+                  }
+                </mat-autocomplete>
+            </mat-form-field>
+            <button class="button-start" (click)="startDrive()">{{driving ? 'Stop' : 'Start'}} Drive</button>
+            <button class="button-start" (click)="reCenter()">Center</button>
         </div>
     </div>
 
@@ -137,7 +153,6 @@
                 </div>
             </div>
             <div class="camping-services">
-                <label>teste</label>
                 <div class="camping-service"
                      [ngClass]="{'selected-mode': service.selected }"
                      *ngFor="let service of campingServices"
@@ -147,7 +162,8 @@
             </div>
         </div>
         <div class="camping-info">
-            <button (click)="cleanMemory()">Clean All Campings</button>
+            <button (click)="cleanCampings()">Clean All Campings</button>
+            <button (click)="showCamping()">Update Here</button>
             <!-- Vai tomá no cú!  -->
             <!-- {{campingFiltering ? 'Filtering...':''}} -->
             <!-- <div class="camping-info">
@@ -159,5 +175,19 @@
         </div>
     </div>
 
+    <!-- Drive Guidance-->
+    <div *ngIf="routeSteps" class="drive-eta">
+        <label>Distance: {{driveGuidanceData.distance}}</label>
+        <label>Duration: {{driveGuidanceData.duration}}</label>
+        <label>ETA: {{driveGuidanceData.eta}}</label>
+    </div>
+
+    <!-- Speep info -->
+    <div *ngIf="driving" class="speed">
+        <label>{{drivingSpeed}}</label>
+    </div>
+
+    <!-- The map -->
     <div #mapElement class="map"></div>
+    
 </div>

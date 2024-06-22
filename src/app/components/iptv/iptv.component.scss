@@ -1,0 +1,114 @@
+.main {
+    display: flex;
+    flex-direction: row;
+    align-content: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+    align-items: stretch;
+}
+
+.categories {
+    width: 20%;
+    height: 600px;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-content: flex-start;
+    justify-content: space-between;
+    align-items: stretch;
+    border-style: solid;
+    overflow: auto;
+}
+
+.category {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-content: space-between;
+    justify-content: space-between;
+    align-items: stretch;
+    font-size: larger;
+    font-weight: bold;
+    color: forestgreen;
+    border-style: solid;
+    border-color: white;
+    cursor: pointer;
+}
+
+.sub-categories {
+    width: 80%;
+    height: 600px;
+    display: flex;
+    align-content: space-between;
+    align-items: stretch;
+    border-style: solid;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    overflow: auto;
+}
+
+
+.subCategory {
+    width: 150px;
+    height: 70px;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: center;
+    justify-content: space-around;
+    align-items: stretch;
+    cursor: pointer;
+    flex-direction: row;
+    border-style: solid;
+}
+
+.channels {
+    width: 80%;
+    height: 600px;
+    display: flex;
+    align-content: space-between;
+    align-items: stretch;
+    border-style: solid;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    overflow: auto;
+}
+
+.channel {
+    width: 150px;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-content: space-between;
+    justify-content: flex-start;
+    align-items: center;
+    cursor: pointer;
+}
+
+
+.subChannels {
+    width: 30%;
+    height: 600px;
+    display: flex;
+    align-content: flex-start;
+    border-style: solid;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow: auto;
+    flex-direction: column;
+    align-items: center;
+}
+
+.subChannel {
+    min-width: 200px;
+    height: 30px;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-content: space-between;
+    justify-content: center;
+    align-items: stretch;
+    border-style: solid;
+    white-space: nowrap;
+    cursor:  pointer;
+}

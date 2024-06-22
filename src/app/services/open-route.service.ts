@@ -40,9 +40,9 @@ export class OpenRouteService {
 
   /**
    * Get the address and properties around of provided lat/long
-   * @param lat 
-   * @param long 
-   * @returns 
+   * @param lat
+   * @param long
+   * @returns
    */
   public reverseGeoCode(lat: number, long: number):  Observable<any> {
     const url = 'https://api.openrouteservice.org/geocode/reverse';
@@ -51,17 +51,17 @@ export class OpenRouteService {
       'point.lon': long,
       'point.lat': lat
     }
-    return this.httpClient.get(url, { params: queryParams });    
+    return this.httpClient.get(url, { params: queryParams });
   }
 
   /**
    * Get a route from the info provided
-   * @param coords 
-   * @param driveMode 
-   * @param avoidFeatures 
-   * @returns 
+   * @param coords
+   * @param driveMode
+   * @param avoidFeatures
+   * @returns
    */
-  public drawRote(coords: any[], driveMode: string, avoidFeatures: string[], vehicleType: string): Observable<any> {
+  public getRoute(coords: any[], driveMode: string, avoidFeatures: string[], vehicleType: string): Observable<any> {
     const postUrl = `https://api.openrouteservice.org/v2/directions/${driveMode}/json`;
     const header = {
       Authorization: this.apiKey
@@ -73,8 +73,20 @@ export class OpenRouteService {
       "coordinates":coords,
       "options": options
     }
+    //console.log(postUrl, JSON.stringify(body), JSON.stringify(header) );
     return this.httpClient.post(postUrl, body, {headers: header} );
   }
+
+  public autoComplete(searchText: string, contry: string): Observable<any> {
+    const url = `https://api.openrouteservice.org/geocode/autocomplete?api_key=${this.apiKey}&text=${searchText}&boundary.country=${contry}`;
+    return this.httpClient.get(url);
+  }
+
+  public geoSearch(searchText: string, contry: string): Observable<any> {
+    const url = `https://api.openrouteservice.org/geocode/search?api_key=${this.apiKey}&text=${searchText}&boundary.country=${contry}`;
+    return this.httpClient.get(url);
+  }
+
 
 
 }

@@ -22,9 +22,9 @@ export class AppComponent {
       link: '/map'
     },
     {
-      title: 'Finance',
-      icon: 'percent-outline',
-      link: '/finance'
+      title: 'IPTV',
+      icon: 'monitor-outline',
+      link: '/iptv'
     },
     {
       title: 'Logout',
