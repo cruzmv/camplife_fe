@@ -34,7 +34,7 @@ export class IptvComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.http.get('http://16.170.250.240:3000/get_iptv_categories').subscribe((data: any) => {
+    this.http.get('http://cruzmv.ddns.net:3000/get_iptv_categories').subscribe((data: any) => {
       this.categories = data.data;
       this.categories.sort((a: any, b: any) => {
         if (a.name < b.name) {
@@ -58,7 +58,7 @@ export class IptvComponent implements OnInit {
 
   onSubCategorySelected(subCategory: string) {
     const encodedSubCategory = encodeURIComponent(subCategory);
-    this.http.get(`http://16.170.250.240:3000/get_chanel_by_category?category=${encodedSubCategory}`).subscribe((data: any) => {
+    this.http.get(`http://cruzmv.ddns.net:3000/get_chanel_by_category?category=${encodedSubCategory}`).subscribe((data: any) => {
       this.channels = data.data;
       this.subChannels = [];
       this.cdRef.detectChanges();
@@ -69,7 +69,7 @@ export class IptvComponent implements OnInit {
     if (channel.channels.length > 1) {
       this.subChannels = channel.channels;
     } else {
-      this.http.get(`http://16.170.250.240:3000/play_channel_by_url?url=${channel.channels[0].url}`).subscribe((data: any) => {
+      this.http.get(`http://cruzmv.ddns.net:3000/play_channel_by_url?url=${channel.channels[0].url}`).subscribe((data: any) => {
         if (data.message == '\nExiting... (End of file)\n'){
           console.log('Played to the end.  Play next in the list');
         } else if(data.message == '\nExiting... (Quit)\n') {

@@ -255,7 +255,7 @@ export class MapsComponent implements AfterViewInit {  //OnInit
 
         const cruising: any = this.campingsIcons.find(x => x.category == 'cruising');
         if (cruising.selected) {
-          const cruisingUrl = `http://16.170.250.240:3000/get_cruiser_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+          const cruisingUrl = `http://cruzmv.ddns.net:3000/get_cruiser_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
           
           const cruisingData: any  = await this.httpClient.get(cruisingUrl).toPromise();
           for (let i = 0; i < cruisingData.data.length; i++) {

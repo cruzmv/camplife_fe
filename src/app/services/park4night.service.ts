@@ -104,9 +104,7 @@ interface Park4NightData {
   providedIn: 'root'
 })
 export class Park4nightService {
-  //campLifeAPiUrl: string = 'http://cruzmv.ddns.net:3000/';
-  //campLifeAPiUrl: string = 'http://localhost:3000/';
-  campLifeAPiUrl: string = 'http://16.170.250.240:3000/';
+  campLifeAPiUrl: string = 'http://cruzmv.ddns.net:3000/';
 
   constructor(private httpClient: HttpClient) { }
   
