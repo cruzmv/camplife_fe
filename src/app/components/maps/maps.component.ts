@@ -67,7 +67,7 @@ interface routes {
   templateUrl: './maps.component.html',
   styleUrl: './maps.component.scss'
 })
-export class MapsComponent implements AfterViewInit {  //OnInit
+export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
 
   // The map
   @ViewChild('mapElement', { static: false }) mapElement!: ElementRef;
@@ -105,7 +105,7 @@ export class MapsComponent implements AfterViewInit {  //OnInit
   choosedTypeVehicle: string = 'unknown';
   driving: boolean = false;
   routeSteps: routes | undefined = undefined;
-  simulateRote: any[] | undefined = undefined; //emulate_rote;  //undefined; 
+  simulateRote: any[] | undefined = undefined; //emulate_rote;  //undefined;
   reRouting: any = {to_route: false, did_reroute: false};
   textGuidance: string = '';
   iconGuidance: any[] = [
@@ -135,44 +135,48 @@ export class MapsComponent implements AfterViewInit {  //OnInit
   // Campings options
   campings: any[] = [];
   campingsIcons = [
-    { category: 'Fuel Station'                , src: 'assets/gas-pump.png'              ,'selected': true  },
-    { category: 'Showers'                     , src: 'assets/shower.png'                ,'selected': true  },
-    { category: 'Sanitation Dump Station'     , src: 'assets/undercarriage.png'         ,'selected': true  },
-    { category: 'Wifi'                        , src: 'assets/wifi-signal.png'           ,'selected': true  },
-    { category: 'Established Campground'      , src: 'assets/CAMPING.png'               ,'selected': true  },
-    { category: 'Wild Camping'                , src: 'assets/tent.png'                  ,'selected': true  },
-    { category: 'Informal Campsite'           , src: 'assets/lamp.png'                  ,'selected': true  },
-    { category: 'Water'                       , src: 'assets/faucet.png'                ,'selected': true  },
-    { category: 'Tourist Attraction'          , src: 'assets/travel-and-tourism.png'    ,'selected': true  },
+    // { category: 'Fuel Station'                , src: 'assets/gas-pump.png'              ,'selected': true  },
+    // { category: 'Showers'                     , src: 'assets/shower.png'                ,'selected': true  },
+    // { category: 'Sanitation Dump Station'     , src: 'assets/undercarriage.png'         ,'selected': true  },
+    // { category: 'Wifi'                        , src: 'assets/wifi-signal.png'           ,'selected': true  },
+    // { category: 'Established Campground'      , src: 'assets/CAMPING.png'               ,'selected': true  },
+    // { category: 'Wild Camping'                , src: 'assets/tent.png'                  ,'selected': true  },
+    // { category: 'Informal Campsite'           , src: 'assets/lamp.png'                  ,'selected': true  },
+    // { category: 'Water'                       , src: 'assets/faucet.png'                ,'selected': true  },
+    // { category: 'Tourist Attraction'          , src: 'assets/travel-and-tourism.png'    ,'selected': true  },
     { category: 'PARKING LOT DAY/NIGHT'       , src: 'assets/PARKING_LOT_DAY_NIGHT.png' ,'selected': true  },
-    { category: 'EXTRA SERVICES'              , src: 'assets/EXTRA_SERVICES.png'        ,'selected': true  },
-    { category: 'CAMPING'                     , src: 'assets/CAMPING.png'               ,'selected': true  },
-    { category: 'PRIVATE CAR PARK FOR CAMPERS', src: 'assets/MOTORHOME_AREA.png'        ,'selected': true  },
-    { category: 'PAYING MOTORHOME AREA'       , src: 'assets/paying_motorhome_area.png' ,'selected': true  },
-    { category: 'ON THE FARM'                 , src: 'assets/ON_THE_FARM.png'           ,'selected': true  },
-    { category: 'SURROUNDED BY NATURE'        , src: 'assets/SURROUNDED_BY_NATURE.png'  ,'selected': true  },
-    { category: 'DAILY PARKING LOT ONLY'      , src: 'assets/DAILY_PARKING_LOT_ONLY.png','selected': true  },
-    { category: 'PICNIC AREA'                 , src: 'assets/PICNIC_AREA.png'           ,'selected': true  },
-    { category: 'OFF-ROAD'                    , src: 'assets/jeep.png'                  ,'selected': true  },
+    { category: 'EXTRA SERVICES'              , src: 'assets/EXTRA_SERVICES.png'        ,'selected': false  },
+    { category: 'CAMPING'                     , src: 'assets/CAMPING.png'               ,'selected': false  },
+    { category: 'PRIVATE CAR PARK FOR CAMPERS', src: 'assets/MOTORHOME_AREA.png'        ,'selected': false  },
+    { category: 'PAYING MOTORHOME AREA'       , src: 'assets/paying_motorhome_area.png' ,'selected': false  },
+    { category: 'ON THE FARM'                 , src: 'assets/ON_THE_FARM.png'           ,'selected': false  },
+    { category: 'SURROUNDED BY NATURE'        , src: 'assets/SURROUNDED_BY_NATURE.png'  ,'selected': false  },
+    { category: 'DAILY PARKING LOT ONLY'      , src: 'assets/DAILY_PARKING_LOT_ONLY.png','selected': false  },
+    { category: 'PICNIC AREA'                 , src: 'assets/PICNIC_AREA.png'           ,'selected': false  },
+    { category: 'OFF-ROAD'                    , src: 'assets/jeep.png'                  ,'selected': false  },
     { category: 'REST AREA'                   , src: 'assets/restaurant.png'            ,'selected': true  },
-    { category: 'HOMESTAYS ACCOMMODATION'     , src: 'assets/homestay.png'              ,'selected': true  },
-    //{ category: 'cruising'                    , src: 'assets/dick.png'                  ,'selected': false }
+    { category: 'HOMESTAYS ACCOMMODATION'     , src: 'assets/homestay.png'              ,'selected': false  },
+    { category: 'INTERMACHE'                  , src: 'assets/intermarche.png'           ,'selected': true  },
+    { category: 'EUROSTOPS'                   , src: 'assets/eurostops.png'             ,'selected': true  },
+    { category: 'CAMPINGCARPORTUGAL'          , src: 'assets/campingcarportugal.png'    ,'selected': true  },
+    { category: 'AREASAC'                     , src: 'assets/areasac.ico'               ,'selected': true  }
   ];
+
   campingOverlay!: Overlay;
   campingServices = [
-    {title: 'tap-water'        , key: 'point_eau'  , src: 'assets/tap-water.svg'        , selected: true },
-    {title: 'black-water'      , key: 'eau_noire'  , src: 'assets/black-water.svg'      , selected: true },
-    {title: 'gray-water'       , key: 'eau_usee'   , src: 'assets/gray-water.svg'       , selected: true },
-    {title: 'public-toilet'    , key: 'wc_public'  , src: 'assets/public-toilet.svg'    , selected: false},
-    {title: 'shower'           , key: 'douche'     , src: 'assets/shower.svg'           , selected: false},
-    {title: 'electricity'      , key: 'electricite', src: 'assets/electricity.svg'      , selected: true },
-    {title: 'wifi'             , key: 'wifi'       , src: 'assets/wifi.svg'             , selected: false},
-    {title: 'laudry'           , key: 'laverie'    , src: 'assets/laudry.svg'           , selected: false},
-    {title: 'pet_allowed'      , key: 'animaux'    , src: 'assets/pet_allowed.svg'      , selected: true },
-    {title: 'bin'              , key: 'poubelle'   , src: 'assets/bin.svg'              , selected: false},
-    {title: 'bakery'           , key: 'boulangerie', src: 'assets/bakery.svg'           , selected: false},
-    {title: 'pool'             , key: 'piscine'    , src: 'assets/pool.svg'             , selected: false},
-    {title: 'winter-caravaning', key: 'caravaneige', src: 'assets/winter-caravaning.svg', selected: false}
+    {title: 'tap-water'        , key: 'point_eau'  , src: 'assets/tap-water.svg'        , selected: false },
+    {title: 'black-water'      , key: 'eau_noire'  , src: 'assets/black-water.svg'      , selected: false },
+    {title: 'gray-water'       , key: 'eau_usee'   , src: 'assets/gray-water.svg'       , selected: false },
+    {title: 'public-toilet'    , key: 'wc_public'  , src: 'assets/public-toilet.svg'    , selected: false },
+    {title: 'shower'           , key: 'douche'     , src: 'assets/shower.svg'           , selected: false },
+    {title: 'electricity'      , key: 'electricite', src: 'assets/electricity.svg'      , selected: false },
+    {title: 'wifi'             , key: 'wifi'       , src: 'assets/wifi.svg'             , selected: false },
+    {title: 'laudry'           , key: 'laverie'    , src: 'assets/laudry.svg'           , selected: false },
+    {title: 'pet_allowed'      , key: 'animaux'    , src: 'assets/pet_allowed.svg'      , selected: false },
+    {title: 'bin'              , key: 'poubelle'   , src: 'assets/bin.svg'              , selected: false },
+    {title: 'bakery'           , key: 'boulangerie', src: 'assets/bakery.svg'           , selected: false },
+    {title: 'pool'             , key: 'piscine'    , src: 'assets/pool.svg'             , selected: false },
+    {title: 'winter-caravaning', key: 'caravaneige', src: 'assets/winter-caravaning.svg', selected: false }
   ]
 
   // The current lat/long position
@@ -191,6 +195,11 @@ export class MapsComponent implements AfterViewInit {  //OnInit
     this.avoidDrive = this.openRoute.avoidDrive;
     this.vehicleType = this.openRoute.vehicleType;
     this.mapFilteredOptions = this.placeSearchOptions.slice();
+  }
+  ngOnInit(): void {
+    if (sessionStorage.getItem('cruising') == 'true') {
+      this.campingsIcons.push({ category: 'cruising', src: 'assets/dick.png','selected': false });
+    }
   }
 
   ngAfterViewInit(): void {
@@ -236,7 +245,7 @@ export class MapsComponent implements AfterViewInit {  //OnInit
         this.mapPois.forEach(poi => {
           this.addPoisToRoute(poi);
         });
-      }      
+      }
     },250);
 
   }
@@ -251,12 +260,12 @@ export class MapsComponent implements AfterViewInit {  //OnInit
       const centerCoordinates = this.openLayers.coords_4326(this.map.getView().getCenter())
       this.park4Night.getCampings(centerCoordinates).subscribe(async (places: any) => {
         const newCampings = places.filter((place: any) => !this.campings.some((camping) => camping.id === place.id));
-        this.campings.push(...newCampings);      
+        this.campings.push(...newCampings);
 
         const cruising: any = this.campingsIcons.find(x => x.category == 'cruising');
-        if (cruising.selected) {
+        if (cruising && cruising.selected) {
           const cruisingUrl = `http://cruzmv.ddns.net:3000/get_cruiser_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
-          
+
           const cruisingData: any  = await this.httpClient.get(cruisingUrl).toPromise();
           for (let i = 0; i < cruisingData.data.length; i++) {
             const place = cruisingData.data[i];
@@ -277,9 +286,120 @@ export class MapsComponent implements AfterViewInit {  //OnInit
             })
           }
         }
+
+        const intermarche: any = this.campingsIcons.find(x => x.category == 'INTERMACHE');
+        if (intermarche && intermarche.selected) {
+          const intermarchegUrl = `http://cruzmv.ddns.net:3000/get_intermache_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+          const intermarcheData: any  = await this.httpClient.get(intermarchegUrl).toPromise();
+          for (let i = 0; i < intermarcheData.data.length; i++) {
+            const place = intermarcheData.data[i];
+
+            this.campings.push({
+              id: `${place.title} \n\n ${place.address} \n\n ${place.label}`,
+              name: `${place.title} - ${place.label}`,
+              note_moyenne: place.title,
+              nb_commentaires: place.label,
+              description_en: place.address,
+              site_internet: place.url,
+              category: {
+                name: 'INTERMACHE'
+              },
+              location: {
+                latitude: place.latitude,
+                longitude: place.longitude
+              }
+            })
+          }
+        }
+
+        const eurostops: any = this.campingsIcons.find(x => x.category == 'EUROSTOPS');
+        if (eurostops && eurostops.selected) {
+          const eurostopsgUrl = `http://cruzmv.ddns.net:3000/get_eurostops_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+          const eurostopsData: any  = await this.httpClient.get(eurostopsgUrl).toPromise();
+          for (let i = 0; i < eurostopsData.data.length; i++) {
+            const place = eurostopsData.data[i];
+            this.campings.push({
+              id: `${place.eurostop_id}-${place.eurostop_name}}`,
+              name: `${place.eurostop_name}`,
+              address: `${place.eurostop_address} - ${place.eurostop_street}`,
+              pays: `${place.eurostop_country}`,
+              description_en: `${place.eurostop_description}`,
+              nb_commentaires: `${place.eurostop_name}`,
+              note_moyenne: `${place.eurostop_name}`,
+              mail: `${place.eurostop_mail}`,
+              site_internet: `https://eurostops.pt/pesquisa?q=${place.eurostop_street}`,   //`${place.eurostop_website}`,
+              tel: `${place.eurostop_tel}`,
+              code_postal: `${place.eurostop_postal_code}`,
+              category: {
+                name: 'EUROSTOPS'
+              },
+              location: {
+                latitude: place.eurostop_latitude,
+                longitude: place.eurostop_longitude
+              },    
+              photos: place.photos ? place.photos.map((photo: any) => ({...photo, link_thumb: `https://autocaravanismo.pt/viewer/${photo.url}`})) : null
+            })
+          }
+        }
+
+        const campingcarportugal: any = this.campingsIcons.find(x => x.category == 'CAMPINGCARPORTUGAL');
+        if (campingcarportugal && campingcarportugal.selected) {
+          const campingcarportugalUrl = `http://cruzmv.ddns.net:3000/get_campingcarportugal_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+          const campingcarportugalData: any  = await this.httpClient.get(campingcarportugalUrl).toPromise();
+          for (let i = 0; i < campingcarportugalData.data.length; i++) {
+            const place = campingcarportugalData.data[i];
+
+            this.campings.push({
+              id: `${place.nomeasmorada}-${place.distritocoordenadas}}`,
+              name: `${place.nomeasmorada}`,
+              note_moyenne: `${place.nomeasmorada}`,
+              nb_commentaires: `${place.distritocoordenadas}`,
+              category: {
+                name: 'CAMPINGCARPORTUGAL'
+              },
+              location: {
+                latitude: place.latitude,
+                longitude: place.longitude
+              },   
+              description_en: place.descricaodaarea,
+              point_eau: place.aguatarifa,
+              despaguascinz: place.despaguascinz,
+              eau_usee: place.despaguascinz,
+              eau_noire: place.despwcquim,
+              electricite: place.tarifa220v,
+              wc_public: place.wc,
+              wifi: place.wifipreco
+            })
+          }
+        }
+
+
+
+        const areasac: any = this.campingsIcons.find(x => x.category == 'AREASAC');
+        if (areasac && areasac.selected) {
+          const areasacUrl = `http://cruzmv.ddns.net:3000/get_areasac_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+          const areasacData: any  = await this.httpClient.get(areasacUrl).toPromise();
+          for (let i = 0; i < areasacData.data.length; i++) {
+            const place = areasacData.data[i];
+
+            this.campings.push({
+              id: `${place.title}-${place.type}}`,
+              name: `${place.title}`,
+              description_en: `${place.type}`,
+              category: {
+                name: 'AREASAC'
+              },
+              location: {
+                latitude: place.latitude,
+                longitude: place.longitude
+              },   
+              site_internet: `https://www.areasac.es${place.link}`
+            })
+          }
+        }
+
         this.drawCampings();
       });
-      
     }
   }
 
@@ -298,7 +418,7 @@ export class MapsComponent implements AfterViewInit {  //OnInit
 
   reCenter() {
     const coord: any[] = [this.currentGeoLocation?.coords?.longitude,this.currentGeoLocation?.coords?.latitude];
-    this.openLayers.zoomToGeoLocation(coord, this.mapZoomValue);    
+    this.openLayers.zoomToGeoLocation(coord, this.mapZoomValue);
   }
 
   onSearchEnterKey() {
@@ -344,7 +464,7 @@ export class MapsComponent implements AfterViewInit {  //OnInit
                   });
                 }
               });
-    
+
               // Then add the search service into the results
               this.openRoute.geoSearch(searchString,country).subscribe(response => {
                 response.features.forEach((place: any) => {
@@ -354,14 +474,14 @@ export class MapsComponent implements AfterViewInit {  //OnInit
                       value: place.properties.localadmin,
                       data: place
                     });
-  
+
                     console.log('this.placeSearchOptions', this.placeSearchOptions);
                     // TODO: double check on this filter, should remove the accents too
                     this.mapFilteredOptions = this.placeSearchOptions.filter(o => o.label.toLowerCase().includes(searchString.toLowerCase()));
                     console.log('this.mapFilteredOptions', this.mapFilteredOptions);
-  
+
                   }
-                });  
+                });
               });
             })
           }
@@ -403,7 +523,7 @@ export class MapsComponent implements AfterViewInit {  //OnInit
                       data: place
                     });
                   }
-                });  
+                });
               });
 
             })
@@ -458,7 +578,7 @@ export class MapsComponent implements AfterViewInit {  //OnInit
       if (features && features.length > 0) {
         // if clicked on a feature
         if (features[0].values_.id) {
-          
+
           // Is it a POI ?
           const regex = /^poi_\d+$/;
           if (regex.test(features[0].values_.id)) {
@@ -466,12 +586,18 @@ export class MapsComponent implements AfterViewInit {  //OnInit
           } else {
             let url = `https://park4night.com/en/place/${features[0].values_.id}`;
             let place = this.campings.find(x => x.id === features[0].values_.id);
-            if (place && place.category.name == 'cruising') {
-              url = place.site_internet;  
+            if (place && (place.category.name == 'cruising' || 
+                          place.category.name == 'INTERMACHE' ||
+                          place.category.name == 'EUROSTOPS' || 
+                          place.category.name == 'AREASAC' )) {
+              url = place.site_internet;
+            } else if (place.category.name == 'CAMPINGCARPORTUGAL') {
+              //url = "https://www.campingcarportugal.com/areasac/LstAreasnv.php?language=PT&mode=2&distrito=0&concelho=0&nomearea=&tiparea=0&pernoita=-1&elect=-1&intern=-1";
+              url = `https://www.google.com/maps?q=${place.location.latitude},${place.location.longitude}`;
             }
             console.log(place);
             console.log(`https://www.google.com/maps?q=${place.location.latitude},${place.location.longitude}`);
-            window.open(url, '_blank');             
+            window.open(url, '_blank');
 
             // TODO: Criar a janela com as info do camping and feedbacks
             // this.park4Night.getFeedbacks(features[0].values_.id).subscribe(feedbacks =>{
@@ -532,10 +658,10 @@ export class MapsComponent implements AfterViewInit {  //OnInit
    * Start the geo location reading and keep it avaliable into this.currentGeoLocation
    */
   private start_geo_track() {
-    
+
     if (this.simulateRote && this.driving) {
       navigator.geolocation.clearWatch(this.watchPositionId);
-      
+
       const emulate = this.simulateRote.filter(x => x.drove == undefined);
 
       let someElapsTime = 0;
@@ -560,7 +686,7 @@ export class MapsComponent implements AfterViewInit {  //OnInit
       /*
       let someElapsTime = 0;
       emulate.forEach((geo: any) =>{
-        
+
         if (geo.elapstime) {
           someElapsTime += parseInt(geo.elapstime);
         }
@@ -591,7 +717,7 @@ export class MapsComponent implements AfterViewInit {  //OnInit
         timeout: 1000,  // Timeout in milliseconds
         maximumAge: 0   // No maximum age for cached positions
       };
-  
+
       this.watchPositionId = navigator.geolocation.watchPosition(
         (geoLocation: geolocationPosition) => {
           this.currentGeoLocation = geoLocation;
@@ -600,7 +726,7 @@ export class MapsComponent implements AfterViewInit {  //OnInit
           if (this.driving) {
             // Re-center the map
             const coord: any[] = [this.currentGeoLocation?.coords?.longitude,this.currentGeoLocation?.coords?.latitude];
-            this.openLayers.zoomToGeoLocation(coord, this.mapZoomValue);    
+            this.openLayers.zoomToGeoLocation(coord, this.mapZoomValue);
             // check on drive rotines.
             this.onDriving();
           }
@@ -728,7 +854,7 @@ export class MapsComponent implements AfterViewInit {  //OnInit
 
     poiDiv.appendChild(input);
     poiDiv.appendChild(button);
-    
+
     this.routePois.nativeElement.appendChild(poiDiv);
   }
 
@@ -742,7 +868,7 @@ export class MapsComponent implements AfterViewInit {  //OnInit
     for (let i = 0; i < this.mapPois.length; i++) {
       coords.push(this.openLayers.coords_4326(this.mapPois[i].coord));
     }
-    
+
     if (coords.length <= 1){
       this.openLayers.removeVectorLayer("routeFeature");
     } else {
@@ -792,7 +918,7 @@ export class MapsComponent implements AfterViewInit {  //OnInit
 
   /**
    * Remove a poi from the map
-   * @param poiName 
+   * @param poiName
    */
   private removePoi(poiName: string) {
     const input = Array.from(this.routePois.nativeElement.children).filter((element: any) => element.id === poiName)
@@ -812,14 +938,14 @@ export class MapsComponent implements AfterViewInit {  //OnInit
    * Add the campings icons to the map
    */
   private drawCampings() {
-    
+
     let counter = 0;
     this.campings.forEach((camping: any) => {
 
       console.log(camping.category.name);
-      
+
       this.openLayers.removeFeature(camping.name);
-      
+
       const categoriesSelected = this.campingsIcons.filter(x => x.selected);
       const servicesSelected = this.campingServices.filter(x => x.selected);
       if (categoriesSelected.some((category) => category.category === camping.category.name) ) {
@@ -855,8 +981,8 @@ export class MapsComponent implements AfterViewInit {  //OnInit
 
   /**
    * Show the camping ofloating window tooltip
-   * @param id 
-   * @param coords 
+   * @param id
+   * @param coords
    */
   private showCampingOverlay(id: any, coords: any) {
     const camping = this.campings.find((p) => p.id === id);
@@ -1022,7 +1148,7 @@ export class MapsComponent implements AfterViewInit {  //OnInit
 
       // Remove the first instruction
       segment.steps[0].status = 'DONE';
-      
+
       // Get the first step that is not passed yet
       const step: step = segment.steps.find((x: step) => x.status != 'DONE')!;
 
@@ -1057,13 +1183,13 @@ export class MapsComponent implements AfterViewInit {  //OnInit
 
       // Update the text Guidance
       this.textGuidance = `${currentDistanceToStepHumanRead} ${currentDistanceLabel}, ${step.instruction}`;
-      
+
       // Icon guidance
       const icon = this.iconGuidance.find(x => x.type == step.type);
       this.iconGuidancePath = icon.path;
       this.cdRef.detectChanges();
 
-      
+
       // --- Voice guidance ----
 
       // Check the distance and enable the voice if needed
@@ -1108,14 +1234,14 @@ export class MapsComponent implements AfterViewInit {  //OnInit
     // Update the speed
     this.drivingSpeed = Math.round(this.currentGeoLocation?.coords?.speed as number);
     // Math.round(this.currentGeoLocation?.coords?.speed as number * 10 / 2) ;
-    
+
 
 
     /*
     if (this.routeSteps && this.routeSteps.routes.length > 0) {
       const instructionStep: segment[] = this.routeSteps.routes[0].segments;
       const geometry = this.routeSteps.routes[0].geometry;
-      const currentPosition = [this.currentGeoLocation?.coords?.longitude, this.currentGeoLocation?.coords?.latitude];      
+      const currentPosition = [this.currentGeoLocation?.coords?.longitude, this.currentGeoLocation?.coords?.latitude];
       const segment: any = instructionStep.find(x => x.status == undefined);
 
       if (this.reRouting.did_reroute) {
@@ -1145,7 +1271,7 @@ export class MapsComponent implements AfterViewInit {  //OnInit
 
           // Text Guidance
           this.textGuidance = `In ${Math.round(currentDistanceToStep)} Meters, ${step.instruction}`;
-          
+
           // Icon guidance
           const icon = this.iconGuidance.find(x => x.type == step.type);
           this.iconGuidancePath = icon.path;
@@ -1160,8 +1286,8 @@ export class MapsComponent implements AfterViewInit {  //OnInit
 
   /**
    * Speak out laude the text received
-   * @param distance 
-   * @param text 
+   * @param distance
+   * @param text
    */
   private speak(text: string) {
     if ('speechSynthesis' in window) {
@@ -1195,7 +1321,7 @@ export class MapsComponent implements AfterViewInit {  //OnInit
 
     const distanceLeft = this.routeSteps?.routes[0].summary.distance - totalDistanceDone;
     const durationLeft = this.routeSteps?.routes[0].summary.duration - totalDurationDone;
-    
+
     const distanceInMeters = Math.round(distanceLeft);
     const distanceInKilometers = Math.round(distanceLeft / 1000);
 

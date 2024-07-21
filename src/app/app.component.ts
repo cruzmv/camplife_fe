@@ -16,21 +16,21 @@ export class AppComponent {
       icon: 'home-outline',
       link: '/dashboard'
     },
-    {
-      title: 'Map',
-      icon: 'map-outline',
-      link: '/map'
-    },
-    {
-      title: 'IPTV',
-      icon: 'monitor-outline',
-      link: '/iptv'
-    },
-    {
-      title: 'Logout',
-      icon: 'unlock-outline',
-      link: '/logout'
-    },
+    // {
+    //   title: 'Map',
+    //   icon: 'map-outline',
+    //   link: '/map'
+    // },
+    // {
+    //   title: 'IPTV',
+    //   icon: 'monitor-outline',
+    //   link: '/iptv'
+    // },
+    // {
+    //   title: 'Logout',
+    //   icon: 'unlock-outline',
+    //   link: '/logout'
+    // },
   ];
 
   constructor(private router: Router) {}

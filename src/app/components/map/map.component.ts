@@ -94,7 +94,7 @@ export class MapComponent implements AfterViewInit, OnInit {
   places: any[] = [];
   place: any;
   tooltipOverlay!: Overlay;
-  apiEndPoint = 'http://cruzmv.ddns.net:3000/';   //'http://cruzmv.ddns.net:3000/';
+  apiEndPoint = 'http://cruzmv.ddns.net:3000/';
   watchGeoId: any;
   myRote: any = {};
   radioPlaying: boolean = false;
