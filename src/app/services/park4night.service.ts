@@ -116,12 +116,30 @@ export class Park4nightService {
       const regionURLs = this.generateURLsForRegion(center.lat, center.lng, 3, 10);
 
       for (const url of regionURLs) {
+        console.log(url);
         const observable = this.getPark4NightPlaces(url).pipe(
           map((data: any) => this.flatData(data.data))
         );
         observables.push(observable);
       }
     }
+
+    return forkJoin(observables).pipe(
+      map((dataArray: DataItem[][]) => {
+        let dataItems: DataItem[] = [];
+        dataArray.forEach(items => {
+          dataItems = [...dataItems, ...items];
+        });
+        return dataItems;
+      })
+    );
+  }
+
+  public getCampingsDB(coords: number[]): Observable<any> {
+    const observables: Observable<DataItem[]>[] = [];
+    observables.push(this.getPark4NightPlacesDB(coords[1],coords[0]).pipe(
+      map((data: any) => this.flatData(data.data))
+    ));
 
     return forkJoin(observables).pipe(
       map((dataArray: DataItem[][]) => {
@@ -167,6 +185,13 @@ export class Park4nightService {
     return this.httpClient.get(url);
   };
 
+  private getPark4NightPlacesDB(lat: number, long: number): Observable<any> {
+    const url = `${this.campLifeAPiUrl}get_park4night_from_db?lat=${lat}&long=${long}`;
+    return this.httpClient.get(url);
+  };
+
+
+
   private generateURLsForRegion(centerLat: number, centerLng: number, gridSize: number, zoom: number): string[] {
     const urls: string[] = [];
     const latRange = 1.0;
@@ -189,13 +214,13 @@ export class Park4nightService {
   private flatData(park4NightData: Park4NightData): DataItem[] {
     return park4NightData.lieux.map((place:any) => {
         const location = {
-            latitude: parseFloat(place.latitude),
-            longitude: parseFloat(place.longitude),
+            latitude: parseFloat(place.latitude?place.latitude:place.location.latitude),
+            longitude: parseFloat(place.longitude?place.longitude:place.location.longitude),
         };
 
         return {
             id: place.id,
-            name: place.titre,
+            name: place.titre?place.titre:place.name,
             date_verified: place.date_creation,
             description: place.description_fr || place.description_en || place.description_de || '',
             location,
@@ -278,6 +303,7 @@ export class Park4nightService {
     let category = 'Park4Night Category'
     switch(code){
         case 'P': category = 'PARKING LOT DAY/NIGHT'; break;
+        case 'ACC_G': category = 'PARKING LOT DAY/NIGHT'; break;
         case 'DS': category = 'EXTRA SERVICES'; break;
         case 'C': category = 'CAMPING'; break;
         case 'ACC_PR': category = 'PRIVATE CAR PARK FOR CAMPERS'; break;

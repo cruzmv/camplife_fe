@@ -149,8 +149,9 @@
                      *ngFor="let category of campingsIcons"
                      [ngClass]="{'selected-mode': category.selected }"
                      (click)="category.selected = !category.selected; showCamping()">
-                    <img src="{{category.src}}" title="{{category.category}}"> {{category.category}}
+                    <img src="{{category.src}}" title="{{category.category}}" width="24px"> {{category.category}}
                 </div>
+                <input type="text" #openrouteSearch>
             </div>
             <div class="camping-services">
                 <div class="camping-service"

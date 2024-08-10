@@ -206,7 +206,8 @@ export class OpenLayersService {
     id: any = undefined,
     text: string | undefined = undefined,
     maxWidth: number = 200, // Maximum width in pixels
-    maxHeight: number = 100  // Maximum height in pixels
+    maxHeight: number = 100,  // Maximum height in pixels
+    scale: number = 1.5 // Scale factor for the icon
   ) {
     const vectorLayer = this.map.getLayers().getArray().find(
       (layer) => layer instanceof VectorLayer
@@ -227,7 +228,7 @@ export class OpenLayersService {
             anchorXUnits: 'fraction',
             anchorYUnits: 'fraction',
             src: iconPath, // Provide the path to your pin icon
-            scale: 1.5, // Adjust the scale to make the icon larger
+            scale: scale, // Adjust the scale to make the icon larger
           }),
         });
   

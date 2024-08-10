@@ -3,11 +3,12 @@ import { OpenLayersService } from '../../services/open-layers.service';
 import { OpenRouteService } from '../../services/open-route.service';
 import { Park4nightService } from '../../services/park4night.service';
 import { Subject, throwError, of, Observable } from 'rxjs';
-import { retryWhen, delay, mergeMap, timeout, startWith, map } from 'rxjs/operators';
+import { retryWhen, delay, mergeMap, timeout, startWith, map, catchError } from 'rxjs/operators';
 import { Overlay } from 'ol';
 import { FormControl } from '@angular/forms';
 import { emulate_rote } from '../map/emulate';
 import { HttpClient } from '@angular/common/http';
+import { any } from 'video.js/dist/types/utils/events';
 
 
 interface geolocationCoordinates {
@@ -75,6 +76,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
 
   // The map search
   @ViewChild('mapSearchInput') mapSearchInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('openrouteSearch') openrouteSearch!: ElementRef<HTMLInputElement>;
   placeSearchOptions: any[] = [];
   mapSearchControl = new FormControl('');
   mapFilteredOptions: any[] = [];
@@ -144,7 +146,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
     // { category: 'Informal Campsite'           , src: 'assets/lamp.png'                  ,'selected': true  },
     // { category: 'Water'                       , src: 'assets/faucet.png'                ,'selected': true  },
     // { category: 'Tourist Attraction'          , src: 'assets/travel-and-tourism.png'    ,'selected': true  },
-    { category: 'PARKING LOT DAY/NIGHT'       , src: 'assets/PARKING_LOT_DAY_NIGHT.png' ,'selected': true  },
+    { category: 'PARKING LOT DAY/NIGHT'       , src: 'assets/PARKING_LOT_DAY_NIGHT.png' ,'selected': false  },
     { category: 'EXTRA SERVICES'              , src: 'assets/EXTRA_SERVICES.png'        ,'selected': false  },
     { category: 'CAMPING'                     , src: 'assets/CAMPING.png'               ,'selected': false  },
     { category: 'PRIVATE CAR PARK FOR CAMPERS', src: 'assets/MOTORHOME_AREA.png'        ,'selected': false  },
@@ -154,12 +156,19 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
     { category: 'DAILY PARKING LOT ONLY'      , src: 'assets/DAILY_PARKING_LOT_ONLY.png','selected': false  },
     { category: 'PICNIC AREA'                 , src: 'assets/PICNIC_AREA.png'           ,'selected': false  },
     { category: 'OFF-ROAD'                    , src: 'assets/jeep.png'                  ,'selected': false  },
-    { category: 'REST AREA'                   , src: 'assets/restaurant.png'            ,'selected': true  },
+    { category: 'REST AREA'                   , src: 'assets/restaurant.png'            ,'selected': false  },
     { category: 'HOMESTAYS ACCOMMODATION'     , src: 'assets/homestay.png'              ,'selected': false  },
-    { category: 'INTERMACHE'                  , src: 'assets/intermarche.png'           ,'selected': true  },
-    { category: 'EUROSTOPS'                   , src: 'assets/eurostops.png'             ,'selected': true  },
-    { category: 'CAMPINGCARPORTUGAL'          , src: 'assets/campingcarportugal.png'    ,'selected': true  },
-    { category: 'AREASAC'                     , src: 'assets/areasac.ico'               ,'selected': true  }
+    { category: 'INTERMACHE'                  , src: 'assets/intermarche.png'           ,'selected': false  },
+    { category: 'EUROSTOPS'                   , src: 'assets/eurostops.png'             ,'selected': false  },
+    { category: 'CAMPINGCARPORTUGAL'          , src: 'assets/campingcarportugal.png'    ,'selected': false  },
+    { category: 'AREASAC'                     , src: 'assets/areasac.ico'               ,'selected': false  },
+    { category: 'CAMPINGCARPARK'              , src: 'assets/campingcarpark.ico'        ,'selected': false  },
+    { category: 'AEAE'                        , src: 'assets/AEAE.png'                  ,'selected': false  },
+    { category: 'CAMPERSTOP'                  , src: 'assets/CAMPERSTOP.png'            ,'selected': false  },
+    { category: 'REVOLUTION'                  , src: 'assets/REVOLUTION.ico'            ,'selected': false  },
+    { category: 'BLOOMESTLAUNDRY'             , src: 'assets/BLOOMESTLAUNDRY.webp'      ,'selected': false  },
+    { category: 'LAWASH'                      , src: 'assets/LAWASH.png'                ,'selected': false  },
+    { category: 'openroute'                   , src: 'assets/map-marker.png'            ,'selected': true  }
   ];
 
   campingOverlay!: Overlay;
@@ -250,156 +259,386 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
 
   }
 
-  showCamping() {
+  async showCamping() {
     if (this.campingBarIsActive) {
       this.layersBarIsActive = false;
       // if (this.routeBarIsActive){
       //   this.routeBar();
       //   this.campingBarIsActive = true;
       // }
+
       const centerCoordinates = this.openLayers.coords_4326(this.map.getView().getCenter())
-      this.park4Night.getCampings(centerCoordinates).subscribe(async (places: any) => {
+
+      // park4Night
+      const pk4n8 = [
+        this.campingsIcons.find(x => x.category == 'PARKING LOT DAY/NIGHT'),
+        this.campingsIcons.find(x => x.category == 'EXTRA SERVICES'),
+        this.campingsIcons.find(x => x.category == 'PRIVATE CAR PARK FOR CAMPERS'),
+        this.campingsIcons.find(x => x.category == 'PAYING MOTORHOME AREA'),
+        this.campingsIcons.find(x => x.category == 'ON THE FARM'),
+        this.campingsIcons.find(x => x.category == 'SURROUNDED BY NATURE'),
+        this.campingsIcons.find(x => x.category == 'DAILY PARKING LOT ONLY'),
+        this.campingsIcons.find(x => x.category == 'PICNIC AREA'),
+        this.campingsIcons.find(x => x.category == 'OFF-ROAD'),
+        this.campingsIcons.find(x => x.category == 'REST AREA'),
+        this.campingsIcons.find(x => x.category == 'HOMESTAYS ACCOMMODATION'),
+      ]
+      if (pk4n8.filter((x: any) => x.selected).length > 0) {  
+        const places = await this.park4Night.getCampings(centerCoordinates)
+                                            .pipe(
+                                              timeout(10000),
+                                              catchError(async (err: any) => {
+                                                if (err.name === 'TimeoutError') {
+                                                  // Handle the timeout error
+                                                  console.error('Park4Night fail on request places');
+                                                  const placesDB = await this.park4Night.getCampingsDB(centerCoordinates).toPromise();
+                                                  console.log(`Park4Night places from DB ${placesDB.length}`);
+                                                  return placesDB;
+                                                }
+                                                return throwError(err);  // Rethrow other errors
+                                              })                                          )
+                                            .toPromise();
         const newCampings = places.filter((place: any) => !this.campings.some((camping) => camping.id === place.id));
         this.campings.push(...newCampings);
+      }
 
-        const cruising: any = this.campingsIcons.find(x => x.category == 'cruising');
-        if (cruising && cruising.selected) {
-          const cruisingUrl = `http://cruzmv.ddns.net:3000/get_cruiser_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+      // cruising
+      const cruising: any = this.campingsIcons.find(x => x.category == 'cruising');
+      if (cruising && cruising.selected) {
+        const cruisingUrl = `http://cruzmv.ddns.net:3000/get_cruiser_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
 
-          const cruisingData: any  = await this.httpClient.get(cruisingUrl).toPromise();
-          for (let i = 0; i < cruisingData.data.length; i++) {
-            const place = cruisingData.data[i];
-            this.campings.push({
-              id: `${place.title_place} \n\n ${place.place_place} \n\n ${place.description_place}`,
-              name: `${place.title_place} - ${place.place_place}`,
-              note_moyenne: place.title_place,
-              nb_commentaires: place.place_place,
-              description_en: place.description_place,
-              site_internet: place.more_place,
-              category: {
-                name: 'cruising'
-              },
-              location: {
-                latitude: place.latitude,
-                longitude: place.longitude
-              }
+        const cruisingData: any  = await this.httpClient.get(cruisingUrl).toPromise();
+        for (let i = 0; i < cruisingData.data.length; i++) {
+          const place = cruisingData.data[i];
+          this.campings.push({
+            id: `${place.title_place} \n\n ${place.place_place} \n\n ${place.description_place}`,
+            name: `${place.title_place} - ${place.place_place}`,
+            note_moyenne: place.title_place,
+            nb_commentaires: place.place_place,
+            description_en: place.description_place,
+            site_internet: place.more_place,
+            category: {
+              name: 'cruising'
+            },
+            location: {
+              latitude: place.latitude,
+              longitude: place.longitude
+            }
+          })
+        }
+      }
+
+      // Intermache
+      const intermarche: any = this.campingsIcons.find(x => x.category == 'INTERMACHE');
+      if (intermarche && intermarche.selected) {
+        const intermarchegUrl = `http://cruzmv.ddns.net:3000/get_intermache_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const intermarcheData: any  = await this.httpClient.get(intermarchegUrl).toPromise();
+        for (let i = 0; i < intermarcheData.data.length; i++) {
+          const place = intermarcheData.data[i];
+
+          this.campings.push({
+            id: `${place.title} \n\n ${place.address} \n\n ${place.label}`,
+            name: `${place.title} - ${place.label}`,
+            note_moyenne: place.title,
+            nb_commentaires: place.label,
+            description_en: place.address,
+            site_internet: place.url,
+            category: {
+              name: 'INTERMACHE'
+            },
+            location: {
+              latitude: place.latitude,
+              longitude: place.longitude
+            }
+          })
+        }
+      }
+
+      // Eurostops
+      const eurostops: any = this.campingsIcons.find(x => x.category == 'EUROSTOPS');
+      if (eurostops && eurostops.selected) {
+        const eurostopsgUrl = `http://cruzmv.ddns.net:3000/get_eurostops_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const eurostopsData: any  = await this.httpClient.get(eurostopsgUrl).toPromise();
+        for (let i = 0; i < eurostopsData.data.length; i++) {
+          const place = eurostopsData.data[i];
+          this.campings.push({
+            id: `${place.eurostop_id}-${place.eurostop_name}}`,
+            name: `${place.eurostop_name}`,
+            address: `${place.eurostop_address} - ${place.eurostop_street}`,
+            pays: `${place.eurostop_country}`,
+            description_en: `${place.eurostop_description}`,
+            nb_commentaires: `${place.eurostop_name}`,
+            note_moyenne: `${place.eurostop_name}`,
+            mail: `${place.eurostop_mail}`,
+            site_internet: `https://eurostops.pt/pesquisa?q=${place.eurostop_street}`,   //`${place.eurostop_website}`,
+            tel: `${place.eurostop_tel}`,
+            code_postal: `${place.eurostop_postal_code}`,
+            category: {
+              name: 'EUROSTOPS'
+            },
+            location: {
+              latitude: place.eurostop_latitude,
+              longitude: place.eurostop_longitude
+            },
+            photos: place.photos ? place.photos.map((photo: any) => ({...photo, link_thumb: `https://autocaravanismo.pt/viewer/${photo.url}`})) : null
+          })
+        }
+      }
+
+      //campingcarportugal
+      const campingcarportugal: any = this.campingsIcons.find(x => x.category == 'CAMPINGCARPORTUGAL');
+      if (campingcarportugal && campingcarportugal.selected) {
+        const campingcarportugalUrl = `http://cruzmv.ddns.net:3000/get_campingcarportugal_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const campingcarportugalData: any  = await this.httpClient.get(campingcarportugalUrl).toPromise();
+        for (let i = 0; i < campingcarportugalData.data.length; i++) {
+          const place = campingcarportugalData.data[i];
+
+          this.campings.push({
+            id: `${place.nomeasmorada}-${place.distritocoordenadas}}`,
+            name: `${place.nomeasmorada}`,
+            note_moyenne: `${place.nomeasmorada}`,
+            nb_commentaires: `${place.distritocoordenadas}`,
+            category: {
+              name: 'CAMPINGCARPORTUGAL'
+            },
+            location: {
+              latitude: place.latitude,
+              longitude: place.longitude
+            },
+            description_en: place.descricaodaarea,
+            point_eau: place.aguatarifa,
+            despaguascinz: place.despaguascinz,
+            eau_usee: place.despaguascinz,
+            eau_noire: place.despwcquim,
+            electricite: place.tarifa220v,
+            wc_public: place.wc,
+            wifi: place.wifipreco
+          })
+        }
+      }
+
+      // areasac
+      const areasac: any = this.campingsIcons.find(x => x.category == 'AREASAC');
+      if (areasac && areasac.selected) {
+        const areasacUrl = `http://cruzmv.ddns.net:3000/get_areasac_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const areasacData: any  = await this.httpClient.get(areasacUrl).toPromise();
+        for (let i = 0; i < areasacData.data.length; i++) {
+          const place = areasacData.data[i];
+
+          this.campings.push({
+            id: `${place.title}-${place.type}}`,
+            name: `${place.title}`,
+            description_en: `${place.type}`,
+            category: {
+              name: 'AREASAC'
+            },
+            location: {
+              latitude: place.latitude,
+              longitude: place.longitude
+            },
+            site_internet: `https://www.areasac.es${place.link}`
+          })
+        }
+      }
+
+      // campingcarpark
+      const campingcarpark: any = this.campingsIcons.find(x => x.category == 'CAMPINGCARPARK');
+      if (campingcarpark && campingcarpark.selected) {
+        const campingcarparkUrl = `http://cruzmv.ddns.net:3000/get_campingcarpark_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const campingcarparkData: any  = await this.httpClient.get(campingcarparkUrl).toPromise();
+        for (let i = 0; i < campingcarparkData.data.length; i++) {
+          const place = campingcarparkData.data[i];
+          const placeData = JSON.parse(place.data)
+
+          this.campings.push({
+            id: `${placeData.name}-${place.type}}`,
+            name: `${placeData.name}`,
+            note_moyenne: `${placeData.averageRating}`,
+            description_en: `${placeData.name} - ${placeData.type} - status: ${placeData.status} - Price: ${placeData.currentPrice}`,
+            category: {
+              name: 'CAMPINGCARPARK'
+            },
+            location: {
+              latitude: place.latitude,
+              longitude: place.longitude
+            },
+            photos: [{link_thumb: placeData.image }],
+            site_internet: `https://www.campingcarpark.com${placeData.slug}`
+          })
+        }
+      }
+
+      // AEAE
+      const AEAE: any = this.campingsIcons.find(x => x.category == 'AEAE');
+      if (AEAE && AEAE.selected) {
+        const AEAEUrl = `http://cruzmv.ddns.net:3000/get_AEAE_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const AEAEData: any  = await this.httpClient.get(AEAEUrl).toPromise();
+        for (let i = 0; i < AEAEData.data.length; i++) {
+          const place = AEAEData.data[i];
+
+          this.campings.push({
+            id: `${place.properties.name}-${place.type}}`,
+            name: `${place.properties.name}`,
+            description_en: `${place.properties.name} -${place.type}`,
+            category: {
+              name: 'AEAE'
+            },
+            location: {
+              latitude: place.geometry.coordinates[1],
+              longitude: place.geometry.coordinates[0]
+            },
+            site_internet: `https://www.google.com/maps?q=${place.geometry.coordinates[1]},${place.geometry.coordinates[0]}`
+          })
+        }
+      }
+
+      // CAMPERSTOP
+      const CAMPERSTOP: any = this.campingsIcons.find(x => x.category == 'CAMPERSTOP');
+      if (CAMPERSTOP && CAMPERSTOP.selected) {
+        const CAMPERSTOPUrl = `http://cruzmv.ddns.net:3000/get_camperstop_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const CAMPERSTOPData: any  = await this.httpClient.get(CAMPERSTOPUrl).toPromise();
+        for (let i = 0; i < CAMPERSTOPData.data.length; i++) {
+          const place = CAMPERSTOPData.data[i];
+
+          const photos = [
+            {
+              link_thumb: place.data.imageurl
+            }
+          ];
+
+          for (let j = 0; j < place.data.media.length; j++) {
+            photos.push({
+              link_thumb: place.data.media[j].url
             })
           }
+
+          this.campings.push({
+            id: `${place.id}`,
+            name: `${place.name}`,
+            description_en: `${place.name} Address: ${place.data.address} - Rate: ${place.data.camperRate} - distanceSupermarket: ${place.data.distanceSupermarket} - numberOfPlaces: ${place.data.numberOfPlaces}`,
+            category: {
+              name: 'CAMPERSTOP'
+            },
+            location: {
+              latitude: place.latitude,
+              longitude: place.longitude
+            },
+            site_internet: `https://camperstop.com/${place.data.websiteurl.replace('nl/','en/')}`,
+            photos: photos,
+            data: place.data
+          })
         }
+      }
 
-        const intermarche: any = this.campingsIcons.find(x => x.category == 'INTERMACHE');
-        if (intermarche && intermarche.selected) {
-          const intermarchegUrl = `http://cruzmv.ddns.net:3000/get_intermache_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
-          const intermarcheData: any  = await this.httpClient.get(intermarchegUrl).toPromise();
-          for (let i = 0; i < intermarcheData.data.length; i++) {
-            const place = intermarcheData.data[i];
+      //REVOLUTION
+      const REVOLUTION: any = this.campingsIcons.find(x => x.category == 'REVOLUTION');
+      if (REVOLUTION && REVOLUTION.selected) {
+        const REVOLUTIONUrl = `http://cruzmv.ddns.net:3000/get_REVOLUTION_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const REVOLUTIONData: any  = await this.httpClient.get(REVOLUTIONUrl).toPromise();
+        for (let i = 0; i < REVOLUTIONData.data.data.length	; i++) {
+          const place = REVOLUTIONData.data.data[i];
 
-            this.campings.push({
-              id: `${place.title} \n\n ${place.address} \n\n ${place.label}`,
-              name: `${place.title} - ${place.label}`,
-              note_moyenne: place.title,
-              nb_commentaires: place.label,
-              description_en: place.address,
-              site_internet: place.url,
-              category: {
-                name: 'INTERMACHE'
-              },
-              location: {
-                latitude: place.latitude,
-                longitude: place.longitude
-              }
-            })
+          this.campings.push({
+            id: `${place.ID}`,
+            name: `${place.location.name}`,
+            description_en: `${place.location.openingHours} - ${place.location.address1}, ${place.location.address2}, ${place.location.address3} ${place.location.city} ${place.location.zip} ${place.location.country}`,
+            category: {
+              name: 'REVOLUTION'
+            },
+            location: {
+              latitude: place.location.geoCoordinates.latitude,
+              longitude: place.location.geoCoordinates.longitude
+            },
+            site_internet: `https://www.google.com/maps?q=${place.location.geoCoordinates.latitude},${place.location.geoCoordinates.longitude}`
+          })
+        }
+      }
+
+      //BLOOMESTLAUNDRY
+      const BLOOMESTLAUNDRY: any = this.campingsIcons.find(x => x.category == 'BLOOMESTLAUNDRY');
+      if (BLOOMESTLAUNDRY && BLOOMESTLAUNDRY.selected) {
+        const BLOOMESTLAUNDRYUrl = `http://cruzmv.ddns.net:3000/get_BLOOMESTLAUNDRY_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const BLOOMESTLAUNDRYData: any  = await this.httpClient.get(BLOOMESTLAUNDRYUrl).toPromise();
+        for (let i = 0; i < BLOOMESTLAUNDRYData.data.objects.length; i++) {
+          const place = BLOOMESTLAUNDRYData.data.objects[i];
+
+          this.campings.push({
+            id: `${place.object_id}`,
+            name: `${place.title}`,
+            description_en: `${place.title} - ${place.object_name} - ${place.author_name} - ${place.terms}`,
+            category: {
+              name: 'BLOOMESTLAUNDRY'
+            },
+            location: {
+              latitude: place.lat,
+              longitude: place.lng
+            },
+            site_internet: `https://www.google.com/maps?q=${place.lat},${place.lng}`
+          })
+        }
+      }
+
+      //LAWASH
+      const LAWASH: any = this.campingsIcons.find(x => x.category == 'LAWASH');
+      if (LAWASH && LAWASH.selected) {
+        const LAWASHUrl = `http://cruzmv.ddns.net:3000/get_LAWASH_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const LAWASHData: any  = await this.httpClient.get(LAWASHUrl).toPromise();
+        for (let i = 0; i < LAWASHData.data.length; i++) {
+          const place = LAWASHData.data[i];
+
+          this.campings.push({
+            id: `${place.address}`,
+            name: `${place.address}`,
+            description_en: `${place.address} - ${place.description} - ${JSON.stringify(place.details)}`,
+            category: {
+              name: 'LAWASH'
+            },
+            location: {
+              latitude: place.latitude,
+              longitude: place.longitude
+            },
+            site_internet: place.url,
+            photos: [{link_thumb: place.photo}]
+          })
+        }
+      }
+
+
+
+
+      
+      //openroute
+      const openRoute: any = this.campingsIcons.find(x => x.category == 'openroute');
+      if (openRoute && openRoute.selected && this.openrouteSearch.nativeElement.value.length > 0) {
+        const openrouteUrl = `http://cruzmv.ddns.net:3000/search_openroute?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}&q=${this.openrouteSearch.nativeElement.value}`;
+        const openrouteData: any  = await this.httpClient.get(openrouteUrl).toPromise();
+        for (let i = 0; i < openrouteData.data.features.length; i++) {
+          const place = openrouteData.data.features[i];
+          let site = undefined;
+          try{
+            site = place.properties.addendum ? place.properties.addendum.osm.website : undefined;
+          } catch (e) {
+            console.error('Error on openroute', e);
           }
+
+          this.campings.push({
+            id: `${place.properties.id}`,
+            name: `${place.properties.label}`,
+            description_en: JSON.stringify(place),
+            category: {
+              name: 'openroute'
+            },
+            location: {
+              latitude: place.geometry.coordinates[1],
+              longitude: place.geometry.coordinates[0]
+            },
+            site_internet: site ? site : `https://www.google.com/maps?q=${place.geometry.coordinates[1]},${place.geometry.coordinates[0]}`
+          })
+
         }
+      }
 
-        const eurostops: any = this.campingsIcons.find(x => x.category == 'EUROSTOPS');
-        if (eurostops && eurostops.selected) {
-          const eurostopsgUrl = `http://cruzmv.ddns.net:3000/get_eurostops_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
-          const eurostopsData: any  = await this.httpClient.get(eurostopsgUrl).toPromise();
-          for (let i = 0; i < eurostopsData.data.length; i++) {
-            const place = eurostopsData.data[i];
-            this.campings.push({
-              id: `${place.eurostop_id}-${place.eurostop_name}}`,
-              name: `${place.eurostop_name}`,
-              address: `${place.eurostop_address} - ${place.eurostop_street}`,
-              pays: `${place.eurostop_country}`,
-              description_en: `${place.eurostop_description}`,
-              nb_commentaires: `${place.eurostop_name}`,
-              note_moyenne: `${place.eurostop_name}`,
-              mail: `${place.eurostop_mail}`,
-              site_internet: `https://eurostops.pt/pesquisa?q=${place.eurostop_street}`,   //`${place.eurostop_website}`,
-              tel: `${place.eurostop_tel}`,
-              code_postal: `${place.eurostop_postal_code}`,
-              category: {
-                name: 'EUROSTOPS'
-              },
-              location: {
-                latitude: place.eurostop_latitude,
-                longitude: place.eurostop_longitude
-              },    
-              photos: place.photos ? place.photos.map((photo: any) => ({...photo, link_thumb: `https://autocaravanismo.pt/viewer/${photo.url}`})) : null
-            })
-          }
-        }
-
-        const campingcarportugal: any = this.campingsIcons.find(x => x.category == 'CAMPINGCARPORTUGAL');
-        if (campingcarportugal && campingcarportugal.selected) {
-          const campingcarportugalUrl = `http://cruzmv.ddns.net:3000/get_campingcarportugal_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
-          const campingcarportugalData: any  = await this.httpClient.get(campingcarportugalUrl).toPromise();
-          for (let i = 0; i < campingcarportugalData.data.length; i++) {
-            const place = campingcarportugalData.data[i];
-
-            this.campings.push({
-              id: `${place.nomeasmorada}-${place.distritocoordenadas}}`,
-              name: `${place.nomeasmorada}`,
-              note_moyenne: `${place.nomeasmorada}`,
-              nb_commentaires: `${place.distritocoordenadas}`,
-              category: {
-                name: 'CAMPINGCARPORTUGAL'
-              },
-              location: {
-                latitude: place.latitude,
-                longitude: place.longitude
-              },   
-              description_en: place.descricaodaarea,
-              point_eau: place.aguatarifa,
-              despaguascinz: place.despaguascinz,
-              eau_usee: place.despaguascinz,
-              eau_noire: place.despwcquim,
-              electricite: place.tarifa220v,
-              wc_public: place.wc,
-              wifi: place.wifipreco
-            })
-          }
-        }
-
-
-
-        const areasac: any = this.campingsIcons.find(x => x.category == 'AREASAC');
-        if (areasac && areasac.selected) {
-          const areasacUrl = `http://cruzmv.ddns.net:3000/get_areasac_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
-          const areasacData: any  = await this.httpClient.get(areasacUrl).toPromise();
-          for (let i = 0; i < areasacData.data.length; i++) {
-            const place = areasacData.data[i];
-
-            this.campings.push({
-              id: `${place.title}-${place.type}}`,
-              name: `${place.title}`,
-              description_en: `${place.type}`,
-              category: {
-                name: 'AREASAC'
-              },
-              location: {
-                latitude: place.latitude,
-                longitude: place.longitude
-              },   
-              site_internet: `https://www.areasac.es${place.link}`
-            })
-          }
-        }
-
-        this.drawCampings();
-      });
+      this.drawCampings();
     }
   }
 
@@ -586,10 +825,17 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
           } else {
             let url = `https://park4night.com/en/place/${features[0].values_.id}`;
             let place = this.campings.find(x => x.id === features[0].values_.id);
-            if (place && (place.category.name == 'cruising' || 
+            if (place && (place.category.name == 'cruising' ||
                           place.category.name == 'INTERMACHE' ||
-                          place.category.name == 'EUROSTOPS' || 
-                          place.category.name == 'AREASAC' )) {
+                          place.category.name == 'EUROSTOPS' ||
+                          place.category.name == 'AREASAC' ||
+                          place.category.name == 'CAMPINGCARPARK' ||
+                          place.category.name == 'AEAE' ||
+                          place.category.name == 'REVOLUTION' ||
+                          place.category.name == 'BLOOMESTLAUNDRY' ||
+                          place.category.name == 'LAWASH' ||
+                          place.category.name == 'openroute' ||
+                          place.category.name == 'CAMPERSTOP')) {
               url = place.site_internet;
             } else if (place.category.name == 'CAMPINGCARPORTUGAL') {
               //url = "https://www.campingcarportugal.com/areasac/LstAreasnv.php?language=PT&mode=2&distrito=0&concelho=0&nomearea=&tiparea=0&pernoita=-1&elect=-1&intern=-1";
@@ -965,7 +1211,12 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
           if (iconCategory) {
             iconPath = iconCategory.src;
           }
-          this.openLayers.addIconInTheMap(coords, camping.name, iconPath, camping.id, camping.name);
+
+          let scale = 1.5;
+          if (iconPath == 'assets/REVOLUTION.ico' || iconPath == 'assets/CAMPERSTOP.png') {
+            scale = 0.5;
+          }
+          this.openLayers.addIconInTheMap(coords, camping.name, iconPath, camping.id, camping.name,undefined,undefined,scale);
         }
       }
       counter++
