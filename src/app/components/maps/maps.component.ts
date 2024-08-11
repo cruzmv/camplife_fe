@@ -165,6 +165,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
     { category: 'CAMPINGCARPARK'              , src: 'assets/campingcarpark.ico'        ,'selected': false  },
     { category: 'AEAE'                        , src: 'assets/AEAE.png'                  ,'selected': false  },
     { category: 'CAMPERSTOP'                  , src: 'assets/CAMPERSTOP.png'            ,'selected': false  },
+    { category: 'CAMPERCONTACT'               , src: 'assets/CAMPERCONTACT.ico'         ,'selected': false  },
     { category: 'REVOLUTION'                  , src: 'assets/REVOLUTION.ico'            ,'selected': false  },
     { category: 'BLOOMESTLAUNDRY'             , src: 'assets/BLOOMESTLAUNDRY.webp'      ,'selected': false  },
     { category: 'LAWASH'                      , src: 'assets/LAWASH.png'                ,'selected': false  },
@@ -530,6 +531,34 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
         }
       }
 
+      // CAMPERCONTACT
+      const CAMPERCONTACT: any = this.campingsIcons.find(x => x.category == 'CAMPERCONTACT');
+      if (CAMPERCONTACT && CAMPERCONTACT.selected) {
+        const CAMPERCONTACTUrl = `http://cruzmv.ddns.net:3000/get_campercontact_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const CAMPERCONTACTData: any  = await this.httpClient.get(CAMPERCONTACTUrl).toPromise();
+        for (let i = 0; i < CAMPERCONTACTData.data.length; i++) {
+          const place = CAMPERCONTACTData.data[i];
+
+          this.campings.push({
+            id: `${place.id}`,  
+            name: `${place.title}`,
+            note_moyenne: place.data._source.filters.rating,
+            description_en: `${place.name} ${place.data._source.subtitle}`,
+            category: {
+              name: 'CAMPERCONTACT'
+            },
+            location: {
+              latitude: place.latitude,
+              longitude: place.longitude
+            },
+            site_internet: `https://www.campercontact.com/en${place.data._source.permalink}`,
+            photos: [{link_thumb: place.data._source.thumbnail}],
+            data: place.data
+          })
+        }
+      }
+
+
       //REVOLUTION
       const REVOLUTION: any = this.campingsIcons.find(x => x.category == 'REVOLUTION');
       if (REVOLUTION && REVOLUTION.selected) {
@@ -602,9 +631,6 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
           })
         }
       }
-
-
-
 
       
       //openroute
@@ -835,7 +861,8 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
                           place.category.name == 'BLOOMESTLAUNDRY' ||
                           place.category.name == 'LAWASH' ||
                           place.category.name == 'openroute' ||
-                          place.category.name == 'CAMPERSTOP')) {
+                          place.category.name == 'CAMPERSTOP' ||
+                          place.category.name == 'CAMPERCONTACT')) {
               url = place.site_internet;
             } else if (place.category.name == 'CAMPINGCARPORTUGAL') {
               //url = "https://www.campingcarportugal.com/areasac/LstAreasnv.php?language=PT&mode=2&distrito=0&concelho=0&nomearea=&tiparea=0&pernoita=-1&elect=-1&intern=-1";
@@ -1213,7 +1240,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
           }
 
           let scale = 1.5;
-          if (iconPath == 'assets/REVOLUTION.ico' || iconPath == 'assets/CAMPERSTOP.png') {
+          if (iconPath == 'assets/REVOLUTION.ico' || iconPath == 'assets/CAMPERSTOP.png' || iconPath == 'assets/CAMPERCONTACT.ico') {
             scale = 0.5;
           }
           this.openLayers.addIconInTheMap(coords, camping.name, iconPath, camping.id, camping.name,undefined,undefined,scale);
