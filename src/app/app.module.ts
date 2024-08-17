@@ -4,7 +4,7 @@ import { BrowserModule, provideClientHydration } from '@angular/platform-browser
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 
-import { NbThemeModule, NbSidebarModule, NbLayoutModule, NbButtonModule, NbMenuModule, NbIconModule, NbCardModule, NbSpinnerModule, NbWindowModule, NbInputModule, NbSelectModule, NbToastrModule, NbAutocompleteModule } from '@nebular/theme';
+import { NbThemeModule, NbSidebarModule, NbLayoutModule, NbButtonModule, NbMenuModule, NbIconModule, NbCardModule, NbSpinnerModule, NbWindowModule, NbInputModule, NbSelectModule, NbToastrModule, NbAutocompleteModule, NbTabsetModule } from '@nebular/theme';
 import { NbEvaIconsModule } from '@nebular/eva-icons';
 //import { MapsComponent } from './maps/maps.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
@@ -40,7 +40,7 @@ import { VideoPlayerComponent } from './components/video-player/video-player.com
     BrowserModule,
     AppRoutingModule,
     HttpClientModule,
-    NbThemeModule.forRoot({ name: 'dark' }),
+    NbThemeModule.forRoot({ name: 'default' }),
     NbSidebarModule.forRoot(), 
     NbLayoutModule, 
     NbButtonModule, 
@@ -58,7 +58,8 @@ import { VideoPlayerComponent } from './components/video-player/video-player.com
     MatAutocompleteModule,
     MatFormFieldModule,
     ReactiveFormsModule,
-    MatInputModule
+    MatInputModule,
+    NbTabsetModule
   ],
   providers: [
     provideClientHydration(),
