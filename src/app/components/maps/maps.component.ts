@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, ViewChild, ChangeDetectorRef, OnInit } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, ViewChild, ChangeDetectorRef, OnInit, HostListener } from '@angular/core';
 import { OpenLayersService } from '../../services/open-layers.service';
 import { OpenRouteService } from '../../services/open-route.service';
 import { Park4nightService } from '../../services/park4night.service';
@@ -9,6 +9,8 @@ import { FormControl } from '@angular/forms';
 import { emulate_rote } from '../map/emulate';
 import { HttpClient } from '@angular/common/http';
 import { any } from 'video.js/dist/types/utils/events';
+import { NbTabsetComponent } from '@nebular/theme';
+
 
 
 interface geolocationCoordinates {
@@ -77,6 +79,8 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
   // The map search
   @ViewChild('mapSearchInput') mapSearchInput!: ElementRef<HTMLInputElement>;
   @ViewChild('openrouteSearch') openrouteSearch!: ElementRef<HTMLInputElement>;
+  @ViewChild('tabRoute') tabRoute!: ElementRef<NbTabsetComponent> | any;
+  @ViewChild('photoInfoImg') photoInfoImg!: ElementRef<HTMLImageElement> | any;
   placeSearchOptions: any[] = [];
   mapSearchControl = new FormControl('');
   mapFilteredOptions: any[] = [];
@@ -95,6 +99,8 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
   mapLayerOptionsAvailiable: string[] = [];
   mapZoomValue: number = 14;
   mapPois: any[] = [];
+  showPoiInfo: boolean = false;
+  photoIndex: number = 0;
 
   // Route Options
   @ViewChild('routePois') routePois!: ElementRef;
@@ -137,34 +143,11 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
 
   // Campings options
   campings: any[] = [];
-
-  campingsMenu = [
-    {
-      title: 'Parking',
-      icon: 'assets/PARKING_LOT_DAY_NIGHT.png',
-      selected: false
-    },
-    {
-      title: 'Camping',
-      icon: 'assets/CAMPING.png',
-      selected: false
-    },
-    {
-      title: 'ASA',
-      icon: 'assets/campingcarportugal.png',
-      selected: false
-    },
-    {
-      title: 'Shopping',
-      icon: 'assets/restaurant.png',
-      selected: false
-    },
-    {
-      title: 'Laundry',
-      icon: 'assets/laudry.png',
-      selected: false
-    },
-  ]
+  selectedPlace: any = undefined;
+  settingsWindow: any = {
+    enable: false,
+    menu: undefined
+  };
 
   campingsIcons = [
     // { category: 'Fuel Station'                , src: 'assets/gas-pump.png'              ,'selected': true  },
@@ -176,30 +159,30 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
     // { category: 'Informal Campsite'           , src: 'assets/lamp.png'                  ,'selected': true  },
     // { category: 'Water'                       , src: 'assets/faucet.png'                ,'selected': true  },
     // { category: 'Tourist Attraction'          , src: 'assets/travel-and-tourism.png'    ,'selected': true  },
-    { category: 'PARKING LOT DAY/NIGHT'       , src: 'assets/PARKING_LOT_DAY_NIGHT.png' ,'selected': true  },
-    { category: 'EXTRA SERVICES'              , src: 'assets/EXTRA_SERVICES.png'        ,'selected': true  },
-    { category: 'CAMPING'                     , src: 'assets/CAMPING.png'               ,'selected': true  },
-    { category: 'PRIVATE CAR PARK FOR CAMPERS', src: 'assets/MOTORHOME_AREA.png'        ,'selected': true  },
-    { category: 'PAYING MOTORHOME AREA'       , src: 'assets/paying_motorhome_area.png' ,'selected': true  },
-    { category: 'ON THE FARM'                 , src: 'assets/ON_THE_FARM.png'           ,'selected': true  },
-    { category: 'SURROUNDED BY NATURE'        , src: 'assets/SURROUNDED_BY_NATURE.png'  ,'selected': true  },
-    { category: 'DAILY PARKING LOT ONLY'      , src: 'assets/DAILY_PARKING_LOT_ONLY.png','selected': true  },
-    { category: 'PICNIC AREA'                 , src: 'assets/PICNIC_AREA.png'           ,'selected': true  },
-    { category: 'OFF-ROAD'                    , src: 'assets/jeep.png'                  ,'selected': true  },
-    { category: 'REST AREA'                   , src: 'assets/restaurant.png'            ,'selected': true  },
-    { category: 'HOMESTAYS ACCOMMODATION'     , src: 'assets/homestay.png'              ,'selected': true  },
-    { category: 'INTERMACHE'                  , src: 'assets/intermarche.png'           ,'selected': true  },
-    { category: 'EUROSTOPS'                   , src: 'assets/eurostops.png'             ,'selected': true  },
-    { category: 'CAMPINGCARPORTUGAL'          , src: 'assets/campingcarportugal.png'    ,'selected': true  },
-    { category: 'AREASAC'                     , src: 'assets/areasac.ico'               ,'selected': true  },
-    { category: 'CAMPINGCARPARK'              , src: 'assets/campingcarpark.ico'        ,'selected': true  },
-    { category: 'AEAE'                        , src: 'assets/AEAE.png'                  ,'selected': true  },
-    { category: 'CAMPERSTOP'                  , src: 'assets/CAMPERSTOP.png'            ,'selected': true  },
-    { category: 'CAMPERCONTACT'               , src: 'assets/CAMPERCONTACT.ico'         ,'selected': true  },
-    { category: 'REVOLUTION'                  , src: 'assets/REVOLUTION.ico'            ,'selected': true  },
-    { category: 'BLOOMESTLAUNDRY'             , src: 'assets/BLOOMESTLAUNDRY.webp'      ,'selected': true  },
-    { category: 'LAWASH'                      , src: 'assets/LAWASH.png'                ,'selected': true  },
-    { category: 'openroute'                   , src: 'assets/map-marker.png'            ,'selected': true  }
+    { category: 'PARKING LOT DAY/NIGHT'       , src: 'assets/PARKING_LOT_DAY_NIGHT.png' ,'selected': true },
+    { category: 'EXTRA SERVICES'              , src: 'assets/EXTRA_SERVICES.png'        ,'selected': true },
+    { category: 'CAMPING'                     , src: 'assets/CAMPING.png'               ,'selected': true },
+    { category: 'PRIVATE CAR PARK FOR CAMPERS', src: 'assets/MOTORHOME_AREA.png'        ,'selected': true },
+    { category: 'PAYING MOTORHOME AREA'       , src: 'assets/paying_motorhome_area.png' ,'selected': true },
+    { category: 'ON THE FARM'                 , src: 'assets/ON_THE_FARM.png'           ,'selected': true },
+    { category: 'SURROUNDED BY NATURE'        , src: 'assets/SURROUNDED_BY_NATURE.png'  ,'selected': true },
+    { category: 'DAILY PARKING LOT ONLY'      , src: 'assets/DAILY_PARKING_LOT_ONLY.png','selected': true },
+    { category: 'PICNIC AREA'                 , src: 'assets/PICNIC_AREA.png'           ,'selected': true },
+    { category: 'OFF-ROAD'                    , src: 'assets/jeep.png'                  ,'selected': true },
+    { category: 'REST AREA'                   , src: 'assets/restaurant.png'            ,'selected': true },
+    { category: 'HOMESTAYS ACCOMMODATION'     , src: 'assets/homestay.png'              ,'selected': true },
+    { category: 'INTERMACHE'                  , src: 'assets/intermarche.png'           ,'selected': true },
+    { category: 'EUROSTOPS'                   , src: 'assets/eurostops.png'             ,'selected': true },
+    { category: 'CAMPINGCARPORTUGAL'          , src: 'assets/campingcarportugal.png'    ,'selected': true },
+    { category: 'AREASAC'                     , src: 'assets/areasac.ico'               ,'selected': true },
+    { category: 'CAMPINGCARPARK'              , src: 'assets/campingcarpark.ico'        ,'selected': true },
+    { category: 'AEAE'                        , src: 'assets/AEAE.png'                  ,'selected': true },
+    { category: 'CAMPERSTOP'                  , src: 'assets/CAMPERSTOP.png'            ,'selected': true },
+    { category: 'CAMPERCONTACT'               , src: 'assets/CAMPERCONTACT.ico'         ,'selected': true },
+    { category: 'REVOLUTION'                  , src: 'assets/REVOLUTION.ico'            ,'selected': true },
+    { category: 'BLOOMESTLAUNDRY'             , src: 'assets/BLOOMESTLAUNDRY.webp'      ,'selected': true },
+    { category: 'LAWASH'                      , src: 'assets/LAWASH.png'                ,'selected': true },
+    { category: 'openroute'                   , src: 'assets/map-marker.png'            ,'selected': true }
   ];
 
   campingOverlay!: Overlay;
@@ -219,11 +202,67 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
     {title: 'winter-caravaning', key: 'caravaneige', src: 'assets/winter-caravaning.svg', selected: false }
   ]
 
+  campingsMenu = [
+    {
+      title: 'Parking',
+      icon: 'assets/PARKING_LOT_DAY_NIGHT.png',
+      selected: false,
+      group: ['PARKING LOT DAY/NIGHT','DAILY PARKING LOT ONLY', 'REST AREA'],
+      avaliable: ['PARKING LOT DAY/NIGHT','DAILY PARKING LOT ONLY', 'REST AREA'],
+      extraFilter: this.campingServices
+    },
+    {
+      title: 'Camping',
+      icon: 'assets/CAMPING.png',
+      selected: false,
+      group: ['CAMPING','PRIVATE CAR PARK FOR CAMPERS', 'PAYING MOTORHOME AREA','HOMESTAYS ACCOMMODATION'],
+      avaliable: ['CAMPING','PRIVATE CAR PARK FOR CAMPERS', 'PAYING MOTORHOME AREA','HOMESTAYS ACCOMMODATION'],
+      extraFilter: this.campingServices
+    },
+    {
+      title: 'Nature',
+      icon: 'assets/SURROUNDED_BY_NATURE.png',
+      selected: false,
+      group: ['ON THE FARM','SURROUNDED BY NATURE','PICNIC AREA','OFF-ROAD'],
+      avaliable: ['ON THE FARM','SURROUNDED BY NATURE','PICNIC AREA','OFF-ROAD'],
+      extraFilter: this.campingServices
+    },
+    {
+      title: 'ASA',
+      icon: 'assets/campingcarportugal.png',
+      selected: false,
+      group: ['AREASAC','EUROSTOPS','CAMPINGCARPORTUGAL','CAMPINGCARPARK','AEAE','CAMPERSTOP','CAMPERCONTACT'],
+      avaliable: ['AREASAC','EUROSTOPS','CAMPINGCARPORTUGAL','CAMPINGCARPARK','AEAE','CAMPERSTOP','CAMPERCONTACT']
+    },
+    {
+      title: 'Shopping',
+      icon: 'assets/restaurant.png',
+      selected: false,
+      group: ['INTERMACHE'],
+      avaliable: ['INTERMACHE']
+    },
+    {
+      title: 'Laundry',
+      icon: 'assets/laudry.png',
+      selected: false,
+      group: ['EXTRA SERVICES','REVOLUTION','BLOOMESTLAUNDRY','LAWASH'],
+      avaliable: ['EXTRA SERVICES','REVOLUTION','BLOOMESTLAUNDRY','LAWASH']
+    },
+  ]
+
   // The current lat/long position
   private currentGeoLocation$: Subject<geolocationPosition | undefined> = new Subject();
   currentGeoLocation: geolocationPosition | undefined = undefined;
   showCurrentLocationInMap: boolean = true;
   watchPositionId: number = 0;
+
+
+  @HostListener('document:keydown', ['$event'])
+  handleKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape' || event.key === 'Esc') {
+      this.showPoiInfo = false;
+    }
+  }  
 
   constructor(private openLayers: OpenLayersService,
               private openRoute: OpenRouteService,
@@ -849,14 +888,52 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
     this.onDriving();
   }
 
-
   campingMenuClick(menu: any){
-    menu.selected = !menu.selected;
+    if (menu){
+      menu.selected = !menu.selected;
+    }
     this.updatePois();
   }
 
+  campingMenuSetting(menu: any){
+    this.settingsWindow.enable = true;
+    this.settingsWindow.menu = menu;
+  }
 
+  photoNavigate(moveAhead: boolean) {
+    if (this.selectedPlace.photos && this.selectedPlace.photos.length > 0) {
+      if (moveAhead){
+        this.photoIndex++;
+      } else {
+        this.photoIndex--;
+      }
 
+      if (this.photoIndex<0) {
+        this.photoIndex = 0;
+      } else if (this.photoIndex >= this.selectedPlace.photos.length ) {
+        this.photoIndex = this.selectedPlace.photos.length -1;
+      }
+      this.photoInfoImg.nativeElement.src = this.selectedPlace.photos[this.photoIndex].link_thumb;
+    } else { 
+      this.photoInfoImg.nativeElement.src = "";
+    }
+  }
+
+  actualLocationFocus() {
+    const coord: any[] = [this.currentGeoLocation?.coords?.longitude,this.currentGeoLocation?.coords?.latitude];
+    this.mapZoomValue = 16;
+    this.openLayers.zoomToGeoLocation(coord, this.mapZoomValue);
+  }
+
+  settingsGroupCheck(event: any,menu: any, option: string) { 
+    const campingMenu = this.campingsMenu.find(x => x.title == menu.title);
+    if (event){
+      campingMenu?.group.push(option);
+    } else {
+      campingMenu?.group.splice(campingMenu?.group.indexOf(option),1);
+    }
+    (this.campingsIcons.find(x => x.category == option) as any).selected = event;
+  }
 
   /**
    * Inicialize the openlayer map
@@ -880,9 +957,25 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
     this.map.on('click', (event: any) => {
       const features = this.map.getFeaturesAtPixel(event.pixel);
       if (features && features.length > 0) {
+        
+        
+        
         // if clicked on a feature
         if (features[0].values_.id) {
 
+          /*
+          const regex = /^poi_\d+$/;
+          if (regex.test(features[0].values_.id)) {
+            // do nothing
+          } else {
+            this.selectedPlace = this.campings.find(x => x.id === features[0].values_.id);
+            console.log(this.selectedPlace);
+            this.showPoiInfo = true;
+            this.cdRef.detectChanges();
+          }
+          */
+
+          
           // Is it a POI ?
           const regex = /^poi_\d+$/;
           if (regex.test(features[0].values_.id)) {
@@ -916,27 +1009,42 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
             //   console.log('feedbacks',feedbacks);
             // });
           }
+
+
+
         }
+
+
       } else {
-        // if clicked out of features add a poi
-        const name = `poi_${this.mapPois.length+1}`;
-        const poiData = {
-          name: name,
-          coord: event.coordinate
-        }
-        this.mapPois.push(poiData)
-        this.openLayers.addIconInTheMap(this.openLayers.coords_4326(event.coordinate),name,'assets/map-marker.png');
-
-        this.layersBarIsActive = false;
-        this.campingBarIsActive = false;
-
-        if (!this.rightToolsIsActive || !this.routeBarIsActive) {
-          this.rightToolsIsActive = true;
+        this.showPoiInfo = false;
+        this.cdRef.detectChanges();
+        if (this.infoBar && this.tabRoute.active) {
+          const name = `poi_${this.mapPois.length+1}`;
+          const poiData = {
+            name: name,
+            coord: event.coordinate
+          }
+          this.mapPois.push(poiData)
+          this.openLayers.addIconInTheMap(this.openLayers.coords_4326(event.coordinate),name,'assets/map-marker.png');
+  
+          this.layersBarIsActive = false;
+          this.campingBarIsActive = false;
+  
+          // if (!this.rightToolsIsActive || !this.routeBarIsActive) {
+          //   this.rightToolsIsActive = true;
+          //   this.routeBarIsActive = true;
+          //   this.cdRef.detectChanges();
+          // }
+  
+          // this.rightToolsIsActive = true;
+          
+          this.infoBar = true;
           this.routeBarIsActive = true;
           this.cdRef.detectChanges();
+  
+          this.addPoisToRoute(poiData);
+          this.drawTheRoute();
         }
-        this.addPoisToRoute(poiData);
-        this.drawTheRoute();
 
       }
     });
@@ -957,10 +1065,20 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
       if (hasFeature) {
         const feature = this.map.forEachFeatureAtPixel(pixel, (feature: any) => feature);
         if (feature && feature.values_.id) {
-          this.showCampingOverlay(feature.values_.id,event.coordinate);
+          //this.showCampingOverlay(feature.values_.id,event.coordinate);
+          this.selectedPlace = this.campings.find(x => x.id === feature.values_.id);
+          this.showPoiInfo = true;
+          this.cdRef.detectChanges();
+          this.photoIndex = 0;
+          this.photoNavigate(false);
         } else {
           this.campingOverlay.getElement()!.style.display = 'none';
+          this.showPoiInfo = false;
+          this.cdRef.detectChanges();
         }
+      // } else {
+      //   this.showPoiInfo = false;
+      //   this.cdRef.detectChanges();
       }
       this.map.getTargetElement().style.cursor = hasFeature ? 'pointer' : '';
     });
@@ -1657,40 +1775,406 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
 
 
   private async updatePois() {
-    const centerCoordinates = this.openLayers.coords_4326(this.map.getView().getCenter())
+    let centerCoordinates: any;
     for(const menu of this.campingsMenu){
       if (menu.selected) {
         switch (menu.title) {
           case 'Parking':
-            const places = await this.park4Night.getCampings(centerCoordinates)
-                                                .pipe(
-                                                  timeout(10000),
-                                                  catchError(async (err: any) => {
-                                                    if (err.name === 'TimeoutError') {
-                                                      // Handle the timeout error
-                                                      console.error('Park4Night fail on request places');
-                                                      const placesDB = await this.park4Night.getCampingsDB(centerCoordinates).toPromise();
-                                                      console.log(`Park4Night places from DB ${placesDB.length}`);
-                                                      return placesDB;
-                                                    }
-                                                    return throwError(err);  // Rethrow other errors
-                                                  })                                          )
-                                                .toPromise();
-            const newCampings = places.filter((place: any) => !this.campings.some((camping) => camping.id === place.id));
-            this.campings.push(...newCampings);
+            this.campings.push(...await this.filterPark4Night(menu.group));
             break;
           case 'Camping':
+            this.campings.push(... await this.filterPark4Night(menu.group));
+            break;
+          case 'Nature':
+            this.campings.push(... await this.filterPark4Night(menu.group));
+            break;
           case 'ASA':
+            //this.setCampings(menu.group,true);
+            centerCoordinates = this.openLayers.coords_4326(this.map.getView().getCenter())
+
+            // areasac
+            //const areasac: any = this.campingsIcons.find(x => x.category == 'AREASAC');
+            //if (areasac && areasac.selected) {
+            if( (this.campingsMenu.find(x => x.title == 'ASA') as any).group.includes('AREASAC')) { 
+              const areasacUrl = `http://cruzmv.ddns.net:3000/get_areasac_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              const areasacData: any  = await this.httpClient.get(areasacUrl).toPromise();
+              for (let i = 0; i < areasacData.data.length; i++) {
+                const place = areasacData.data[i];
+
+                this.campings.push({
+                  id: `${place.title}-${place.type}}`,
+                  name: `${place.title}`,
+                  description_en: `${place.type}`,
+                  category: {
+                    name: 'AREASAC'
+                  },
+                  location: {
+                    latitude: place.latitude,
+                    longitude: place.longitude
+                  },
+                  site_internet: `https://www.areasac.es${place.link}`
+                })
+              }
+            }
+
+            // Eurostops
+            //const eurostops: any = this.campingsIcons.find(x => x.category == 'EUROSTOPS');
+            //if (eurostops && eurostops.selected) {
+            if( (this.campingsMenu.find(x => x.title == 'ASA') as any).group.includes('EUROSTOPS')) { 
+              const eurostopsgUrl = `http://cruzmv.ddns.net:3000/get_eurostops_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              const eurostopsData: any  = await this.httpClient.get(eurostopsgUrl).toPromise();
+              for (let i = 0; i < eurostopsData.data.length; i++) {
+                const place = eurostopsData.data[i];
+                this.campings.push({
+                  id: `${place.eurostop_id}-${place.eurostop_name}}`,
+                  name: `${place.eurostop_name}`,
+                  address: `${place.eurostop_address} - ${place.eurostop_street}`,
+                  pays: `${place.eurostop_country}`,
+                  description_en: `${place.eurostop_description}`,
+                  nb_commentaires: `${place.eurostop_name}`,
+                  note_moyenne: `${place.eurostop_name}`,
+                  mail: `${place.eurostop_mail}`,
+                  site_internet: `https://eurostops.pt/pesquisa?q=${place.eurostop_street}`,   //`${place.eurostop_website}`,
+                  tel: `${place.eurostop_tel}`,
+                  code_postal: `${place.eurostop_postal_code}`,
+                  category: {
+                    name: 'EUROSTOPS'
+                  },
+                  location: {
+                    latitude: place.eurostop_latitude,
+                    longitude: place.eurostop_longitude
+                  },
+                  photos: place.photos ? place.photos.map((photo: any) => ({...photo, link_thumb: `https://autocaravanismo.pt/viewer/${photo.url}`})) : null
+                })
+              }
+            }
+
+            //campingcarportugal
+            //const campingcarportugal: any = this.campingsIcons.find(x => x.category == 'CAMPINGCARPORTUGAL');
+            //if (campingcarportugal && campingcarportugal.selected) {
+            if( (this.campingsMenu.find(x => x.title == 'ASA') as any).group.includes('CAMPINGCARPORTUGAL')) { 
+              const campingcarportugalUrl = `http://cruzmv.ddns.net:3000/get_campingcarportugal_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              const campingcarportugalData: any  = await this.httpClient.get(campingcarportugalUrl).toPromise();
+              for (let i = 0; i < campingcarportugalData.data.length; i++) {
+                const place = campingcarportugalData.data[i];
+
+                this.campings.push({
+                  id: `${place.nomeasmorada}-${place.distritocoordenadas}}`,
+                  name: `${place.nomeasmorada}`,
+                  note_moyenne: `${place.nomeasmorada}`,
+                  nb_commentaires: `${place.distritocoordenadas}`,
+                  category: {
+                    name: 'CAMPINGCARPORTUGAL'
+                  },
+                  location: {
+                    latitude: place.latitude,
+                    longitude: place.longitude
+                  },
+                  description_en: place.descricaodaarea,
+                  point_eau: place.aguatarifa,
+                  despaguascinz: place.despaguascinz,
+                  eau_usee: place.despaguascinz,
+                  eau_noire: place.despwcquim,
+                  electricite: place.tarifa220v,
+                  wc_public: place.wc,
+                  wifi: place.wifipreco
+                })
+              }
+            }
+
+            // campingcarpark
+            //const campingcarpark: any = this.campingsIcons.find(x => x.category == 'CAMPINGCARPARK');
+            //if (campingcarpark && campingcarpark.selected) {
+            if( (this.campingsMenu.find(x => x.title == 'ASA') as any).group.includes('CAMPINGCARPARK')) { 
+              const campingcarparkUrl = `http://cruzmv.ddns.net:3000/get_campingcarpark_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              const campingcarparkData: any  = await this.httpClient.get(campingcarparkUrl).toPromise();
+              for (let i = 0; i < campingcarparkData.data.length; i++) {
+                const place = campingcarparkData.data[i];
+                const placeData = JSON.parse(place.data)
+
+                this.campings.push({
+                  id: `${placeData.name}-${place.type}}`,
+                  name: `${placeData.name}`,
+                  note_moyenne: `${placeData.averageRating}`,
+                  description_en: `${placeData.name} - ${placeData.type} - status: ${placeData.status} - Price: ${placeData.currentPrice}`,
+                  category: {
+                    name: 'CAMPINGCARPARK'
+                  },
+                  location: {
+                    latitude: place.latitude,
+                    longitude: place.longitude
+                  },
+                  photos: [{link_thumb: placeData.image }],
+                  site_internet: `https://www.campingcarpark.com${placeData.slug}`
+                })
+              }
+            }
+
+            // AEAE
+            //const AEAE: any = this.campingsIcons.find(x => x.category == 'AEAE');
+            //if (AEAE && AEAE.selected) {
+            if( (this.campingsMenu.find(x => x.title == 'ASA') as any).group.includes('AEAE')) { 
+              const AEAEUrl = `http://cruzmv.ddns.net:3000/get_AEAE_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              const AEAEData: any  = await this.httpClient.get(AEAEUrl).toPromise();
+              for (let i = 0; i < AEAEData.data.length; i++) {
+                const place = AEAEData.data[i];
+
+                this.campings.push({
+                  id: `${place.properties.name}-${place.type}}`,
+                  name: `${place.properties.name}`,
+                  description_en: `${place.properties.name} -${place.type}`,
+                  category: {
+                    name: 'AEAE'
+                  },
+                  location: {
+                    latitude: place.geometry.coordinates[1],
+                    longitude: place.geometry.coordinates[0]
+                  },
+                  site_internet: `https://www.google.com/maps?q=${place.geometry.coordinates[1]},${place.geometry.coordinates[0]}`
+                })
+              }
+            }
+
+            // CAMPERSTOP
+            //const CAMPERSTOP: any = this.campingsIcons.find(x => x.category == 'CAMPERSTOP');
+            //if (CAMPERSTOP && CAMPERSTOP.selected) {
+            if( (this.campingsMenu.find(x => x.title == 'ASA') as any).group.includes('CAMPERSTOP')) { 
+              const CAMPERSTOPUrl = `http://cruzmv.ddns.net:3000/get_camperstop_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              const CAMPERSTOPData: any  = await this.httpClient.get(CAMPERSTOPUrl).toPromise();
+              for (let i = 0; i < CAMPERSTOPData.data.length; i++) {
+                const place = CAMPERSTOPData.data[i];
+
+                const photos = [
+                  {
+                    link_thumb: place.data.imageurl
+                  }
+                ];
+
+                for (let j = 0; j < place.data.media.length; j++) {
+                  photos.push({
+                    link_thumb: place.data.media[j].url
+                  })
+                }
+
+                this.campings.push({
+                  id: `${place.id}`,
+                  name: `${place.name}`,
+                  description_en: `${place.name} Address: ${place.data.address} - Rate: ${place.data.camperRate} - distanceSupermarket: ${place.data.distanceSupermarket} - numberOfPlaces: ${place.data.numberOfPlaces}`,
+                  category: {
+                    name: 'CAMPERSTOP'
+                  },
+                  location: {
+                    latitude: place.latitude,
+                    longitude: place.longitude
+                  },
+                  site_internet: `https://camperstop.com/${place.data.websiteurl.replace('nl/','en/')}`,
+                  photos: photos,
+                  data: place.data
+                })
+              }
+            }
+
+            // CAMPERCONTACT
+            //const CAMPERCONTACT: any = this.campingsIcons.find(x => x.category == 'CAMPERCONTACT');
+            //if (CAMPERCONTACT && CAMPERCONTACT.selected) {
+            if( (this.campingsMenu.find(x => x.title == 'ASA') as any).group.includes('CAMPERSTOP')) { 
+              const CAMPERCONTACTUrl = `http://cruzmv.ddns.net:3000/get_campercontact_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              const CAMPERCONTACTData: any  = await this.httpClient.get(CAMPERCONTACTUrl).toPromise();
+              for (let i = 0; i < CAMPERCONTACTData.data.length; i++) {
+                const place = CAMPERCONTACTData.data[i];
+
+                this.campings.push({
+                  id: `${place.id}`,
+                  name: `${place.title}`,
+                  note_moyenne: place.data._source.filters.rating,
+                  description_en: `${place.name} ${place.data._source.subtitle}`,
+                  category: {
+                    name: 'CAMPERCONTACT'
+                  },
+                  location: {
+                    latitude: place.latitude,
+                    longitude: place.longitude
+                  },
+                  site_internet: `https://www.campercontact.com/en${place.data._source.permalink}`,
+                  photos: [{link_thumb: place.data._source.thumbnail}],
+                  data: place.data
+                })
+              }
+            }
+
+            break;
           case 'Shopping':
+            //this.setCampings(menu.group,true);
+            centerCoordinates = this.openLayers.coords_4326(this.map.getView().getCenter())
+
+            // Intermache
+            //const intermarche: any = this.campingsIcons.find(x => x.category == 'INTERMACHE');
+            //if (intermarche && intermarche.selected) {
+            if( (this.campingsMenu.find(x => x.title == 'Shopping') as any).group.includes('INTERMACHE')) { 
+              const intermarchegUrl = `http://cruzmv.ddns.net:3000/get_intermache_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              const intermarcheData: any  = await this.httpClient.get(intermarchegUrl).toPromise();
+              for (let i = 0; i < intermarcheData.data.length; i++) {
+                const place = intermarcheData.data[i];
+
+                this.campings.push({
+                  id: `${place.title} \n\n ${place.address} \n\n ${place.label}`,
+                  name: `${place.title} - ${place.label}`,
+                  note_moyenne: place.title,
+                  nb_commentaires: place.label,
+                  description_en: place.address,
+                  site_internet: place.url,
+                  category: {
+                    name: 'INTERMACHE'
+                  },
+                  location: {
+                    latitude: place.latitude,
+                    longitude: place.longitude
+                  }
+                })
+              }
+            }
+            break;
           case 'Laundry':
+            //this.setCampings(menu.group,true);
+            centerCoordinates = this.openLayers.coords_4326(this.map.getView().getCenter())
+
+            //REVOLUTION
+            //const REVOLUTION: any = this.campingsIcons.find(x => x.category == 'REVOLUTION');
+            //if (REVOLUTION && REVOLUTION.selected) {
+            if( (this.campingsMenu.find(x => x.title == 'Laundry') as any).group.includes('REVOLUTION')) { 
+              const REVOLUTIONUrl = `http://cruzmv.ddns.net:3000/get_REVOLUTION_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              const REVOLUTIONData: any  = await this.httpClient.get(REVOLUTIONUrl).toPromise();
+              for (let i = 0; i < REVOLUTIONData.data.data.length	; i++) {
+                const place = REVOLUTIONData.data.data[i];
+
+                this.campings.push({
+                  id: `${place.ID}`,
+                  name: `${place.location.name}`,
+                  description_en: `${place.location.openingHours} - ${place.location.address1}, ${place.location.address2}, ${place.location.address3} ${place.location.city} ${place.location.zip} ${place.location.country}`,
+                  category: {
+                    name: 'REVOLUTION'
+                  },
+                  location: {
+                    latitude: place.location.geoCoordinates.latitude,
+                    longitude: place.location.geoCoordinates.longitude
+                  },
+                  site_internet: `https://www.google.com/maps?q=${place.location.geoCoordinates.latitude},${place.location.geoCoordinates.longitude}`
+                })
+              }
+            }
+
+            //BLOOMESTLAUNDRY
+            //const BLOOMESTLAUNDRY: any = this.campingsIcons.find(x => x.category == 'BLOOMESTLAUNDRY');
+            //if (BLOOMESTLAUNDRY && BLOOMESTLAUNDRY.selected) {
+            if( (this.campingsMenu.find(x => x.title == 'Laundry') as any).group.includes('BLOOMESTLAUNDRY')) { 
+              const BLOOMESTLAUNDRYUrl = `http://cruzmv.ddns.net:3000/get_BLOOMESTLAUNDRY_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              const BLOOMESTLAUNDRYData: any  = await this.httpClient.get(BLOOMESTLAUNDRYUrl).toPromise();
+              for (let i = 0; i < BLOOMESTLAUNDRYData.data.objects.length; i++) {
+                const place = BLOOMESTLAUNDRYData.data.objects[i];
+
+                this.campings.push({
+                  id: `${place.object_id}`,
+                  name: `${place.title}`,
+                  description_en: `${place.title} - ${place.object_name} - ${place.author_name} - ${place.terms}`,
+                  category: {
+                    name: 'BLOOMESTLAUNDRY'
+                  },
+                  location: {
+                    latitude: place.lat,
+                    longitude: place.lng
+                  },
+                  site_internet: `https://www.google.com/maps?q=${place.lat},${place.lng}`
+                })
+              }
+            }
+
+            //LAWASH
+            //const LAWASH: any = this.campingsIcons.find(x => x.category == 'LAWASH');
+            //if (LAWASH && LAWASH.selected) {
+            if( (this.campingsMenu.find(x => x.title == 'Laundry') as any).group.includes('LAWASH')) { 
+              const LAWASHUrl = `http://cruzmv.ddns.net:3000/get_LAWASH_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              const LAWASHData: any  = await this.httpClient.get(LAWASHUrl).toPromise();
+              for (let i = 0; i < LAWASHData.data.length; i++) {
+                const place = LAWASHData.data[i];
+
+                this.campings.push({
+                  id: `${place.address}`,
+                  name: `${place.address}`,
+                  description_en: `${place.address} - ${place.description} - ${JSON.stringify(place.details)}`,
+                  category: {
+                    name: 'LAWASH'
+                  },
+                  location: {
+                    latitude: place.latitude,
+                    longitude: place.longitude
+                  },
+                  site_internet: place.url,
+                  photos: [{link_thumb: place.photo}]
+                })
+              }
+            }
+            
+            // Park4Night
+            this.campings.push(...await this.filterPark4Night(menu.group));
+
+            break;
           default:
             break;
         }
+      } else {
+        this.setCampings(menu.group);
       }
-
-
     }
+
+    // Clean all pois
+    this.campings.forEach(element => {
+      this.openLayers.removeFeature(element.name);
+    });
+
+    // Draw the pois
     this.drawCampings();
   }
 
+  private async setCampings(categoriesToSelect: any, value: boolean = false) {
+    this.campingsIcons = this.campingsIcons.map((item: any) => {
+      if (categoriesToSelect.includes(item.category)) {
+        return {
+          ...item,
+          selected: value
+        };
+      } else {
+        return {
+          ...item,
+          selected: item.selected
+        };
+      }
+    });
+  
+  }
+
+  private async filterPark4Night(categoriesToSelect: any) {
+    this.setCampings(categoriesToSelect,true);
+    const centerCoordinates = this.openLayers.coords_4326(this.map.getView().getCenter())
+    const places = await this.park4Night.getCampings(centerCoordinates)
+                                        .pipe(
+                                          timeout(15000),
+                                          catchError(async (err: any) => {
+                                            if (err.name === 'TimeoutError') {
+                                              // Handle the timeout error
+                                              console.error('Park4Night fail on request places');
+                                              const placesDB = await this.park4Night.getCampingsDB(centerCoordinates).toPromise();
+                                              console.log(`Park4Night places from DB ${placesDB.length}`);
+                                              return placesDB;
+                                            }
+                                            return throwError(err);  // Rethrow other errors
+                                          })                                          )
+                                        .toPromise();
+    return places.filter((place: any) => !this.campings.some((camping) => camping.id === place.id));
+  }
+
+
+
 }
+
+
+
