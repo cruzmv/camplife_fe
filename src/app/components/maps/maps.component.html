@@ -1,5 +1,251 @@
 <div class="main-container">
 
+    <div *ngIf="infoBar" class="info-container">
+        <nb-tabset>
+            <nb-tab tabTitle="Places">
+                <div class="placesAction">
+                    <!-- <nb-icon icon="refresh-outline" (click)="campingMenuClick(null)" class="placeActionIcons"></nb-icon>  -->
+                    <!-- <nb-icon icon="compass-outline" (click)="actualLocationFocus()" class="placeActionIcons"></nb-icon>  -->
+                    <mat-icon class="placeActionIcons"
+                              (click)="actualLocationFocus()"
+                              title="Focus on your location">
+                              location_searching
+                    </mat-icon>
+                    <mat-icon class="placeActionIcons"
+                              (click)="cleanCampings()"
+                              title="Clean all points">
+                        cleaning_services
+                    </mat-icon>
+                    <mat-icon class="placeActionIcons"
+                              *ngIf="showPoiInfo"
+                              (click)="showPoiInfo=false"
+                              title="Close this info panel">
+                        cancel
+                    </mat-icon>
+                </div>
+
+                <mat-form-field class="mat-form">
+                    <mat-label>Search</mat-label>
+                    <input #mapSearchInput
+                        type="text"
+                        placeholder="Search"
+                        matInput
+                        class="search-field"
+                        (keydown.enter)="campingMenuClick(null)">
+
+                        <!-- [formControl]="mapSearchControl" -->
+                        <!-- [matAutocomplete]="auto" -->
+                        <!-- (input)="mapSearchFilter(false)" -->
+                        <!-- (focus)="mapSearchFilter(true)" -->
+                        <!-- (keydown.enter)="onSearchEnterKey()" -->
+                    <!-- <mat-autocomplete requireSelection #auto="matAutocomplete">
+                    @for (option of mapFilteredOptions; track placeSearchOptions) {
+                        <mat-option [value]="option.label">{{option.label}}</mat-option>
+                    }
+                    </mat-autocomplete> -->
+                    <mat-icon matSuffix (click)="campingMenuClick(null)" style="cursor: pointer">search</mat-icon>
+                </mat-form-field>
+
+                <div class="camping-menu"
+                     [ngClass]="{'selected-mode': menu.selected }"
+                     *ngFor="let menu of campingsMenu">
+                    <div class="camping-menu-info" (click)="campingMenuClick(menu)">
+                        <div class="camping-menu-icon"><img src="{{menu.icon}}"></div>
+                        <div class="camping-menu-text">{{menu.title}}</div>
+                    </div>
+                    <div class="camping-menu-settings" (click)="campingMenuSetting(menu)">
+                        <nb-icon icon="settings-2-outline"></nb-icon>
+                    </div>
+                </div>
+
+                <!-- <div class="google-ad">
+                    ad here
+                    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5485202639053265" crossorigin="anonymous"></script>
+                    <ins class="adsbygoogle"
+                            style="display:block"
+                            data-ad-client="ca-pub-5485202639053265"
+                            data-ad-slot="1305647386"
+                            data-ad-format="auto"
+                            data-full-width-responsive="true">
+                    </ins>
+                    <script>
+                            (adsbygoogle = window.adsbygoogle || []).push({});
+                    </script>
+                </div> -->
+
+                <div class="poi-info" *ngIf="showPoiInfo">
+                    <div class="photosInfo" *ngIf="selectedPlace.photos && selectedPlace.photos.length > 0">
+                        <nb-icon icon="arrow-left-outline" class="photoNavigateIcon" (click)="photoNavigate(false)"></nb-icon>
+                        <img src="" #photoInfoImg class="photoInfoImg">
+                        <nb-icon icon="arrow-right-outline" class="photoNavigateIcon" (click)="photoNavigate(true)"></nb-icon>
+                        <br>
+                    </div>
+                    <div class="photoPage" *ngIf="selectedPlace.photos">{{photoIndex+1}}/{{selectedPlace.photos.length}}</div>
+                    <h4 style="padding-left: 15px;">{{selectedPlace.name}}</h4>
+
+                    &nbsp;
+                    <a href="https://park4night.com/en/place/{{selectedPlace.id}}" target="_blank" *ngIf="['cruising','INTERMACHE','EUROSTOPS','AREASAC','CAMPINGCARPARK','AEAE','REVOLUTION','BLOOMESTLAUNDRY','LAWASH','openroute','CAMPERSTOP','CAMPERCONTACT','PARKINGVERDE'].includes(selectedPlace.category.name) == false">
+                        <img src="assets/park4night.png" class="support-icon" alt="Park4Night" title="Check in Park4Night">
+                    </a>
+                    &nbsp;
+                    <a href="https://www.google.com/maps?q={{selectedPlace.location.latitude}},{{selectedPlace.location.longitude}}" target="_blank">
+                        <img src="assets/google-maps.png" class="support-icon" alt="Google Maps" title="Check on Google Maps">
+                    </a>
+                    &nbsp;
+                    <a href="{{selectedPlace.site_internet}}" *ngIf="selectedPlace.site_internet" target="_blank">
+
+                        <img *ngIf="WebSite(selectedPlace.site_internet).img != undefined"
+                             [src]="WebSite(selectedPlace.site_internet).img"
+                             class="support-icon"
+                             alt="Webpage"
+                             [title]="WebSite(selectedPlace.site_internet).title">
+                    </a>
+                    &nbsp;
+                    <a href="https://www.ventusky.com/?p={{selectedPlace.location.latitude}};{{selectedPlace.location.longitude}};11&l=rain-3h&t=20240909/1800" target="_blank">
+                        <img src="assets/ventusky.png" class="support-icon" alt="Weather Ventusky" title="Check the weather in Ventusky">
+                    </a>
+                    &nbsp;
+                    <label *ngIf="selectedPlace.tel" style="cursor: pointer;" (click)="showTelephone=!showTelephone">
+                        <img src="assets/telephone.png" class="support-icon" alt="Telephone" title="Call and check">
+                    </label>
+                    <label (click)="copyLatLnt(selectedPlace.location.latitude,selectedPlace.location.longitude)"
+                           style="cursor: pointer; color: blue" >
+                           <img src="assets/longitude-and-latitude.png" class="support-icon" alt="Copy Coordenates" title="Copy the Coordenates">
+                    </label>
+                    &nbsp;
+                    <a href="mailto:{{selectedPlace.mail}}" *ngIf="selectedPlace.mail">
+                        <img src="assets/email.png" class="support-icon" alt="Email" title="Contact via email">
+                    </a>
+                    <p></p>
+                    <div class="serviceIcons">
+                        <img src="assets/tap-water.svg" *ngIf="selectedPlace.point_eau>0" width="7%" style="padding-left: 5px" title="Potable water">
+                        <img src="assets/black-water.svg" *ngIf="selectedPlace.eau_noire>0" width="7%" style="padding-left: 5px" title="Black ater">
+                        <img src="assets/gray-water.svg" *ngIf="selectedPlace.eau_usee>0" width="7%" style="padding-left: 5px" title="Gray water">
+                        <img src="assets/public-toilet.svg" *ngIf="selectedPlace.wc_public>0" width="7%" style="padding-left: 5px" title="Public toilet">
+                        <img src="assets/shower.svg" *ngIf="selectedPlace.douche>0" width="7%" style="padding-left: 5px" title="Shower">
+                        <img src="assets/electricity.svg" *ngIf="selectedPlace.electricite>0" width="7%" style="padding-left: 5px" title="Eletricity">
+                        <img src="assets/wifi.svg" *ngIf="selectedPlace.wifi>0" width="7%" style="padding-left: 5px" title="Wi-Fi">
+                        <img src="assets/laudry.svg" *ngIf="selectedPlace.laverie>0" width="7%" style="padding-left: 5px" title="Laudry">
+                        <img src="assets/pet_allowed.svg" *ngIf="selectedPlace.animaux>0" width="7%" style="padding-left: 5px" title="Pets allowed">
+                        <img src="assets/bin.svg" *ngIf="selectedPlace.poubelle>0" width="7%" style="padding-left: 5px" title="Bins">
+                        <img src="assets/bakery.svg" *ngIf="selectedPlace.boulangerie>0" width="7%" style="padding-left: 5px" title="Potable Bakery">
+                        <img src="assets/pool.svg" *ngIf="selectedPlace.piscine>0" width="7%" style="padding-left: 5px" title="Swiming pool">
+                        <img src="assets/winter-caravaning.svg" *ngIf="selectedPlace.caravaneige>0" width="7%" style="padding-left: 5px" title="Winter caravaning">
+                    </div>
+
+                    <p><label class="price-label" *ngIf="selectedPlace.prix_stationnement">Parking: {{selectedPlace.prix_stationnement}}</label></p>
+                    <p><label class="price-label" *ngIf="selectedPlace.prix_services">Service: {{selectedPlace.prix_services}}</label></p>
+
+                    <div class="star-rating">
+                        <nb-icon
+                            *ngFor="let star of stars; let i = index"
+                            [icon]="getStarIcon(i,selectedPlace.note_moyenne)"
+                            class="star"
+                            [class.half-star]="isHalfStar(i,selectedPlace.note_moyenne)">
+                        </nb-icon>
+                        <span>{{selectedPlace.note_moyenne}}</span>
+                        <span class="rating-info">({{ selectedPlace.nb_commentaires }} {{ selectedPlace.nb_commentaires === 1 ? 'commentary' : 'commentaries' }})</span>
+                    </div>
+                        
+                    <p class="placeDescription">
+                        Description: {{selectedPlace.description_en}}
+                    </p>
+                    <!-- <div class="google-ad">
+                        ad here
+                        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5485202639053265" crossorigin="anonymous"></script>
+                        <ins class="adsbygoogle"
+                                style="display:block"
+                                data-ad-client="ca-pub-5485202639053265"
+                                data-ad-slot="1325828688"
+                                data-ad-format="auto"
+                                data-full-width-responsive="true"></ins>
+                        <script>
+                                (adsbygoogle = window.adsbygoogle || []).push({});
+                        </script>
+                    </div> -->
+                </div>
+            </nb-tab>
+
+            <nb-tab tabTitle="Routes" #tabRoute>
+                <!-- <div *ngIf="routeBarIsActive"> -->
+                    <label class="route-label">Drive Mode</label>
+                    <div class="routes-drive-type">
+                        <div *ngFor="let mode of driveMode"
+                            [ngClass]="{'selected-mode': mode === choosedDriveMode}">
+                            <img src="assets/{{mode}}.png"
+                                title="{{mode}}"
+                                class="route-icons"
+                                (click)="choosedDriveMode = mode; drawRoute()">
+                        </div>
+                    </div>
+                    <hr>
+                    <label class="route-label">Avoid</label>
+                    <div class="routes-avoide">
+                        <div *ngFor="let avoid of avoidDrive"
+                            [ngClass]="{'selected-mode': choosedAvoids.includes(avoid)}">
+                            <img src="assets/{{avoid}}.png"
+                                title="{{avoid}}"
+                                class="route-icons"
+                                (click)="setAvoid(avoid); drawRoute()">
+                        </div>
+                    </div>
+                    <hr>
+                    <label class="route-label">Type of Vehicle</label>
+                    <div class="route-veicle-type">
+                        <div *ngFor="let type of vehicleType"
+                            [ngClass]="{'selected-mode': type === choosedTypeVehicle}">
+                            <img src="assets/{{type}}.png"
+                                title="{{type}}"
+                                class="route-icons"
+                                (click)="choosedTypeVehicle = type; drawRoute()">
+                        </div>
+                    </div>
+                    <hr>
+                    <label class="route-label">Routes</label>
+
+                    <div #routePois class="route-pois">
+                        <div class="route-poi" id="location-from">
+                            <input type="text" class="poi-input" value="Current Location" disabled>
+                        </div>
+                    </div>
+
+                    <div class="resume-route">
+                        <mat-form-field class="mat-form">
+                            <mat-label>Search</mat-label>
+                            <input #mapSearchInput
+                                type="text"
+                                placeholder="Search"
+                                matInput
+                                [formControl]="mapSearchControl"
+                                [matAutocomplete]="auto"
+                                (input)="mapSearchFilter(false)"
+                                (focus)="mapSearchFilter(true)"
+                                (keydown.enter)="onSearchEnterKey()">
+                            <mat-autocomplete requireSelection #auto="matAutocomplete">
+                            @for (option of mapFilteredOptions; track placeSearchOptions) {
+                                <mat-option [value]="option.label">{{option.label}}</mat-option>
+                            }
+                            </mat-autocomplete>
+                        </mat-form-field>
+                        <!-- <button class="button-start" (click)="startDrive()">{{driving ? 'Stop' : 'Start'}} Drive</button>
+                        <button class="button-start" (click)="reCenter()">Center</button> -->
+                    </div>
+                    <!-- <div class="google-ad">
+                        ad here
+                    </div> -->
+
+                <!-- </div> -->
+            </nb-tab>
+
+            <!-- <nb-tab tabTitle="Ads">
+                <div class="google-ad">
+                    ad here
+                </div>
+            </nb-tab> -->
+
+        </nb-tabset>
+    </div>
+
     <div class="map-container">
 
         <!-- Top bar info-->
@@ -16,50 +262,50 @@
         </div>
 
         <!-- Open/Close Tools-->
-        <nb-icon icon="{{infoBar ? 'arrow-right-outline' : 'arrow-left-outline'}}" 
+        <nb-icon icon="{{infoBar ? 'arrow-left-outline' : 'settings-2-outline'}}"
                  class="open-right-toolbar"
                  (click)="infoBar=!infoBar;">
-        </nb-icon> 
-        <!-- <nb-icon *ngIf="!rightToolsIsActive" 
-                icon="settings-2-outline" 
+        </nb-icon>
+        <!-- <nb-icon *ngIf="!rightToolsIsActive"
+                icon="settings-2-outline"
                 class="open-right-toolbar"
                 (click)="rightToolsIsActive=!rightToolsIsActive; infoBar=!infoBar;">
         </nb-icon>  -->
 
         <!-- Tools -->
         <div *ngIf="rightToolsIsActive" class="right-tools">
-            <nb-icon icon="close-square-outline" 
-                    class="tools-icons" 
+            <nb-icon icon="close-square-outline"
+                    class="tools-icons"
                     title="Close tools"
                     (click)="rightToolsIsActive=!rightToolsIsActive">
             </nb-icon>
             <div class="circle-tool-icons" title="Change map">
-                <nb-icon icon="layers-outline" 
+                <nb-icon icon="layers-outline"
                         class="tools-icons"
                         (click)="layersBarIsActive=!layersBarIsActive">
-                </nb-icon> 
+                </nb-icon>
             </div>
             <div class="circle-tool-icons" title="Rotes">
-                <nb-icon icon="car-outline" 
+                <nb-icon icon="car-outline"
                         class="tools-icons"
-                        (click)="routeBar()"></nb-icon> 
+                        (click)="routeBar()"></nb-icon>
             </div>
             <div class="circle-tool-icons" title="Campings">
-                <nb-icon icon="map-outline" 
+                <nb-icon icon="map-outline"
                         class="tools-icons"
-                        (click)="campingBarIsActive=!campingBarIsActive; showCamping()"></nb-icon> 
+                        (click)="campingBarIsActive=!campingBarIsActive; showCamping()"></nb-icon>
             </div>
             <div class="circle-tool-icons" title="Radio">
-                <nb-icon icon="music-outline" class="tools-icons"></nb-icon> 
+                <nb-icon icon="music-outline" class="tools-icons"></nb-icon>
             </div>
             <div class="circle-tool-icons" title="YouTube">
-                <nb-icon icon="tv-outline" class="tools-icons"></nb-icon> 
+                <nb-icon icon="tv-outline" class="tools-icons"></nb-icon>
             </div>
             <div class="circle-tool-icons" title="Debug">
-                <nb-icon icon="credit-card-outline" class="tools-icons"></nb-icon> 
+                <nb-icon icon="credit-card-outline" class="tools-icons"></nb-icon>
             </div>
             <div class="circle-tool-icons" title="Full Screen">
-                <nb-icon icon="external-link-outline" class="tools-icons"></nb-icon> 
+                <nb-icon icon="external-link-outline" class="tools-icons"></nb-icon>
             </div>
         </div>
 
@@ -71,7 +317,7 @@
                 <img src="assets/openstreetmap.png" (click)="setMapCompany('OSM')">
             </div>
             <div class="layer-options">
-                <button class="button-layer" 
+                <button class="button-layer"
                         *ngFor="let layer of mapLayerOptionsAvailiable"
                         (click)="setMapLayerOption(layer)">{{layer}}</button>
             </div>
@@ -84,8 +330,8 @@
             <div class="routes-drive-type">
                 <div *ngFor="let mode of driveMode"
                     [ngClass]="{'selected-mode': mode === choosedDriveMode}">
-                    <img src="assets/{{mode}}.png" 
-                        title="{{mode}}" 
+                    <img src="assets/{{mode}}.png"
+                        title="{{mode}}"
                         class="route-icons"
                         (click)="choosedDriveMode = mode; drawRoute()">
                 </div>
@@ -95,8 +341,8 @@
             <div class="routes-avoide">
                 <div *ngFor="let avoid of avoidDrive"
                     [ngClass]="{'selected-mode': choosedAvoids.includes(avoid)}">
-                    <img src="assets/{{avoid}}.png" 
-                        title="{{avoid}}" 
+                    <img src="assets/{{avoid}}.png"
+                        title="{{avoid}}"
                         class="route-icons"
                         (click)="setAvoid(avoid); drawRoute()">
                 </div>
@@ -106,8 +352,8 @@
             <div class="route-veicle-type">
                 <div *ngFor="let type of vehicleType"
                     [ngClass]="{'selected-mode': type === choosedTypeVehicle}">
-                    <img src="assets/{{type}}.png" 
-                        title="{{type}}" 
+                    <img src="assets/{{type}}.png"
+                        title="{{type}}"
                         class="route-icons"
                         (click)="choosedTypeVehicle = type; drawRoute()">
                 </div>
@@ -168,7 +414,7 @@
                         *ngFor="let service of campingServices"
                         (click)="service.selected = !service.selected; showCamping()">
                         <img src="{{service.src}}" title="{{service.title}}" width="24px"> {{service.title}}
-                    </div>    
+                    </div>
                 </div>
             </div>
             <div class="camping-info">
@@ -199,200 +445,67 @@
 
         <!-- The map -->
         <div #mapElement class="map"></div>
-        
-    </div>
 
-    <div *ngIf="infoBar" class="info-container">
-        <nb-tabset>
-            <nb-tab tabTitle="Places">
-                <mat-form-field class="mat-form">
-                    <mat-label>Search</mat-label>
-                    <input #mapSearchInput
-                        type="text"
-                        placeholder="Search"
-                        matInput
-                        [formControl]="mapSearchControl"
-                        [matAutocomplete]="auto"
-                        (input)="mapSearchFilter(false)"
-                        (focus)="mapSearchFilter(true)"
-                        (keydown.enter)="onSearchEnterKey()"
-                        class="search-field">
-                    <mat-autocomplete requireSelection #auto="matAutocomplete">
-                    @for (option of mapFilteredOptions; track placeSearchOptions) {
-                        <mat-option [value]="option.label">{{option.label}}</mat-option>
-                    }
-                    </mat-autocomplete>
-                </mat-form-field>
-
-                <div class="placesAction">
-                    <nb-icon icon="refresh-outline" (click)="campingMenuClick(null)" class="placeActionIcons"></nb-icon> 
-                    <nb-icon icon="compass-outline" (click)="actualLocationFocus()" class="placeActionIcons"></nb-icon> 
-                </div>
-
-                <div class="camping-menu" 
-                     [ngClass]="{'selected-mode': menu.selected }"
-                     *ngFor="let menu of campingsMenu">
-                    <div class="camping-menu-info" (click)="campingMenuClick(menu)">
-                        <div class="camping-menu-icon"><img src="{{menu.icon}}"></div>
-                        <div class="camping-menu-text">{{menu.title}}</div>
-                    </div>
-                    <div class="camping-menu-settings" (click)="campingMenuSetting(menu)">
-                        <nb-icon icon="settings-2-outline"></nb-icon>
-                    </div>
-                </div>
-
-                <div class="poi-info" *ngIf="showPoiInfo">
-                    <div class="photosInfo">
-                        <nb-icon icon="arrow-left-outline" class="photoNavigateIcon" (click)="photoNavigate(false)"></nb-icon> 
-                        <img src="" #photoInfoImg width="300px">
-                        <nb-icon icon="arrow-right-outline" class="photoNavigateIcon" (click)="photoNavigate(true)"></nb-icon> 
-                        <br>
-                    </div>
-                    <div class="photoPage" *ngIf="selectedPlace.photos">{{photoIndex+1}}/{{selectedPlace.photos.length}}</div>
-                    <h4>{{selectedPlace.name}}</h4>
-
-                    &nbsp;
-                    <a href="https://park4night.com/en/place/{{selectedPlace.id}}" target="_blank" *ngIf="['cruising','INTERMACHE','EUROSTOPS','AREASAC','CAMPINGCARPARK','AEAE','REVOLUTION','BLOOMESTLAUNDRY','LAWASH','openroute','CAMPERSTOP','CAMPERCONTACT'].includes(selectedPlace.category.name) == false">Park4Night</a>
-                    &nbsp;
-                    <a href="https://www.google.com/maps?q={{selectedPlace.location.latitude}},{{selectedPlace.location.longitude}}" target="_blank">GMaps</a>
-                    &nbsp;
-                    <a href="{{selectedPlace.site_internet}}" *ngIf="selectedPlace.site_internet" target="_blank">Webpage</a>
-                    &nbsp;
-                    <label *ngIf="selectedPlace.tel">{{selectedPlace.tel}}</label>
-                    &nbsp;
-                    <a href="mailto:{{selectedPlace.mail}}" *ngIf="selectedPlace.mail">{{selectedPlace.mail}}</a>
-                    <p></p>
-                    <div class="serviceIcons">
-                        <img src="assets/tap-water.svg" *ngIf="selectedPlace.point_eau>0" width="8%" style="padding-left: 5px">
-                        <img src="assets/black-water.svg" *ngIf="selectedPlace.eau_noire>0" width="8%" style="padding-left: 5px">
-                        <img src="assets/gray-water.svg" *ngIf="selectedPlace.eau_usee>0" width="8%" style="padding-left: 5px">
-                        <img src="assets/public-toilet.svg" *ngIf="selectedPlace.wc_public>0" width="8%" style="padding-left: 5px">
-                        <img src="assets/shower.svg" *ngIf="selectedPlace.douche>0" width="8%" style="padding-left: 5px">
-                        <img src="assets/electricity.svg" *ngIf="selectedPlace.electricite>0" width="8%" style="padding-left: 5px">
-                        <img src="assets/wifi.svg" *ngIf="selectedPlace.wifi>0" width="8%" style="padding-left: 5px">
-                        <img src="assets/laudry.svg" *ngIf="selectedPlace.laverie>0" width="8%" style="padding-left: 5px">
-                        <img src="assets/pet_allowed.svg" *ngIf="selectedPlace.animaux>0" width="8%" style="padding-left: 5px">
-                        <img src="assets/bin.svg" *ngIf="selectedPlace.poubelle>0" width="8%" style="padding-left: 5px">
-                        <img src="assets/bakery.svg" *ngIf="selectedPlace.boulangerie>0" width="8%" style="padding-left: 5px">
-                        <img src="assets/pool.svg" *ngIf="selectedPlace.piscine>0" width="8%" style="padding-left: 5px">
-                        <img src="assets/winter-caravaning.svg" *ngIf="selectedPlace.caravaneige>0" width="8%">
-                    </div>
-                    <p class="placeScore">
-                        Score: {{selectedPlace.note_moyenne}} - ({{selectedPlace.nb_commentaires}}) <br> 
-                        Parking $: {{selectedPlace.prix_stationnement}}<br>
-                        Service $: {{selectedPlace.prix_services}} 
-                    </p>
-                    <p class="placeDescription">
-                        Description: {{selectedPlace.description_en}}
-                    </p>
-                    
-                </div>
-
-
-            </nb-tab>
-
-            <nb-tab tabTitle="Routes" #tabRoute>
-                <!-- <div *ngIf="routeBarIsActive"> -->
-                    <label class="route-label">Drive Mode</label>
-                    <div class="routes-drive-type">
-                        <div *ngFor="let mode of driveMode"
-                            [ngClass]="{'selected-mode': mode === choosedDriveMode}">
-                            <img src="assets/{{mode}}.png" 
-                                title="{{mode}}" 
-                                class="route-icons"
-                                (click)="choosedDriveMode = mode; drawRoute()">
-                        </div>
-                    </div>
-                    <hr>
-                    <label class="route-label">Avoid</label>
-                    <div class="routes-avoide">
-                        <div *ngFor="let avoid of avoidDrive"
-                            [ngClass]="{'selected-mode': choosedAvoids.includes(avoid)}">
-                            <img src="assets/{{avoid}}.png" 
-                                title="{{avoid}}" 
-                                class="route-icons"
-                                (click)="setAvoid(avoid); drawRoute()">
-                        </div>
-                    </div>
-                    <hr>
-                    <label class="route-label">Type of Vehicle</label>
-                    <div class="route-veicle-type">
-                        <div *ngFor="let type of vehicleType"
-                            [ngClass]="{'selected-mode': type === choosedTypeVehicle}">
-                            <img src="assets/{{type}}.png" 
-                                title="{{type}}" 
-                                class="route-icons"
-                                (click)="choosedTypeVehicle = type; drawRoute()">
-                        </div>
-                    </div>
-                    <hr>
-                    <label class="route-label">Routes</label>
-
-                    <div #routePois class="route-pois">
-                        <div class="route-poi" id="location-from">
-                            <input type="text" class="poi-input" value="Current Location" disabled>
-                        </div>
-                    </div>
-
-                    <div class="resume-route">
-                        <mat-form-field class="mat-form">
-                            <mat-label>Search</mat-label>
-                            <input #mapSearchInput
-                                type="text"
-                                placeholder="Search"
-                                matInput
-                                [formControl]="mapSearchControl"
-                                [matAutocomplete]="auto"
-                                (input)="mapSearchFilter(false)"
-                                (focus)="mapSearchFilter(true)"
-                                (keydown.enter)="onSearchEnterKey()">
-                            <mat-autocomplete requireSelection #auto="matAutocomplete">
-                            @for (option of mapFilteredOptions; track placeSearchOptions) {
-                                <mat-option [value]="option.label">{{option.label}}</mat-option>
-                            }
-                            </mat-autocomplete>
-                        </mat-form-field>
-                        <button class="button-start" (click)="startDrive()">{{driving ? 'Stop' : 'Start'}} Drive</button>
-                        <button class="button-start" (click)="reCenter()">Center</button>
-                    </div>
-                <!-- </div> -->
-            </nb-tab>
-
-            <nb-tab tabTitle="Ads">
-            </nb-tab>
-
-        </nb-tabset>        
-
-
-
+        <!-- <div class="google-ad-top-horizont">
+            ad here
+            <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5485202639053265" crossorigin="anonymous"></script>
+            <ins class="adsbygoogle"
+                    style="display:block"
+                    data-ad-client="ca-pub-5485202639053265"
+                    data-ad-slot="2544946559"
+                    data-ad-format="auto"
+                    data-full-width-responsive="true"></ins>
+            <script>
+                    (adsbygoogle = window.adsbygoogle || []).push({});
+            </script>
+        </div> -->
+    
+        <div class="refresh-buttom">
+            <button class="refesh-button-button" (click)="campingMenuClick(null)">Refresh Here</button>
+        </div>
     </div>
 
 </div>
 
-
-
 <div class="settings-window" *ngIf="settingsWindow.enable">
     <div class="settings-header">
         <label>Settings</label>
-        <nb-icon icon="close-outline" (click)="settingsWindow.enable = false" style="cursor: pointer;"></nb-icon>
+        <nb-icon icon="close-outline" (click)="settingsWindow.enable = false; campingMenuClick(null)" style="cursor: pointer;"></nb-icon>
     </div>
     <div class="settgins-content">
         <div class="option-checkbox">
-            <nb-checkbox *ngFor="let option of settingsWindow.menu.avaliable" 
+            <nb-checkbox *ngFor="let option of settingsWindow.menu.avaliable"
                          [checked]="settingsWindow.menu.group.includes(option)"
                          (checkedChange)="settingsGroupCheck($event,settingsWindow.menu,option)">
                 {{option}}
             </nb-checkbox>
+
+            <!-- <div class="google-ad">
+                ad here
+            </div> -->
         </div>
 
         <div class="extra-option-checkbox">
-            <nb-checkbox *ngFor="let extra of settingsWindow.menu.extraFilter" 
+            <nb-checkbox *ngFor="let extra of settingsWindow.menu.extraFilter"
                          [checked]="extra.selected"
                          (checkedChange)="extra.selected = !extra.selected"  >
                 <img src="{{extra.src}}" width="24px"> {{extra.title}}
             </nb-checkbox>
         </div>
-        
+
 
     </div>
 </div>
+
+<div class="waiting-page" *ngIf="waitingPage">
+    <mat-spinner></mat-spinner>
+</div>
+
+<div *ngIf="showTelephone" class="telephone-info">
+    <div class="telephone-info-header"><label class="close-telephone" (click)="showTelephone=false">x</label></div>
+    <div class="telephone-info-content">
+        {{selectedPlace.tel}}
+    </div>
+</div>
+
+

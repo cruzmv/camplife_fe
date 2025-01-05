@@ -32,10 +32,14 @@ import { YouTubePlayerModule } from '@angular/youtube-player';
 import { MapsComponent } from './components/maps/maps.component';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 
+import { ReactiveFormsModule } from '@angular/forms';
+
 import {MatAutocompleteModule} from '@angular/material/autocomplete';
 import {MatFormFieldModule} from '@angular/material/form-field';
-import { ReactiveFormsModule } from '@angular/forms';
-import { MatInputModule } from '@angular/material/input';
+import {MatInputModule} from '@angular/material/input';
+import {MatIconModule} from '@angular/material/icon';
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
+
 import { IptvComponent } from './components/iptv/iptv.component';
 import { VideoPlayerComponent } from './components/video-player/video-player.component';
 
@@ -55,6 +59,7 @@ import { VideoPlayerComponent } from './components/video-player/video-player.com
     BrowserModule,
     AppRoutingModule,
     HttpClientModule,
+    ReactiveFormsModule,
     NbThemeModule.forRoot({ name: 'default' }),
     NbSidebarModule.forRoot(), 
     NbLayoutModule, 
@@ -67,15 +72,16 @@ import { VideoPlayerComponent } from './components/video-player/video-player.com
     NbWindowModule.forRoot({}),
     NbInputModule,
     NbSelectModule,
-    YouTubePlayerModule,
     NbToastrModule.forRoot(),
     NbAutocompleteModule,
+    NbTabsetModule,
+    NbCheckboxModule,
+    YouTubePlayerModule,
     MatAutocompleteModule,
     MatFormFieldModule,
-    ReactiveFormsModule,
     MatInputModule,
-    NbTabsetModule,
-    NbCheckboxModule
+    MatIconModule,
+    MatProgressSpinnerModule
   ],
   providers: [
     provideClientHydration(),

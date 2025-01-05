@@ -104,7 +104,7 @@ interface Park4NightData {
   providedIn: 'root'
 })
 export class Park4nightService {
-  campLifeAPiUrl: string = 'http://cruzmv.ddns.net:3000/';
+  campLifeAPiUrl: string = 'https://camplife.ddns.net:443/api/';
 
   constructor(private httpClient: HttpClient) { }
   

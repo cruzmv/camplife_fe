@@ -2,13 +2,11 @@ import { AfterViewInit, Component, ElementRef, ViewChild, ChangeDetectorRef, OnI
 import { OpenLayersService } from '../../services/open-layers.service';
 import { OpenRouteService } from '../../services/open-route.service';
 import { Park4nightService } from '../../services/park4night.service';
-import { Subject, throwError, of, Observable } from 'rxjs';
-import { retryWhen, delay, mergeMap, timeout, startWith, map, catchError } from 'rxjs/operators';
-import { Overlay, Tile } from 'ol';
+import { Subject, throwError, of } from 'rxjs';
+import { retryWhen, delay, mergeMap, timeout, catchError } from 'rxjs/operators';
+import { Overlay } from 'ol';
 import { FormControl } from '@angular/forms';
-import { emulate_rote } from '../map/emulate';
 import { HttpClient } from '@angular/common/http';
-import { any } from 'video.js/dist/types/utils/events';
 import { NbTabsetComponent } from '@nebular/theme';
 
 
@@ -75,6 +73,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
   // The map
   @ViewChild('mapElement', { static: false }) mapElement!: ElementRef;
   map: any;
+  waitingPage: boolean = false;
 
   // The map search
   @ViewChild('mapSearchInput') mapSearchInput!: ElementRef<HTMLInputElement>;
@@ -91,7 +90,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
   routeBarIsActive: boolean = false;
   campingBarIsActive: boolean = false;
   campingFiltering: boolean = false;
-  infoBar: boolean = false;
+  infoBar: boolean = true;
 
   // Maps options
   mapLayerCompany: string = 'Google';
@@ -148,6 +147,8 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
     enable: false,
     menu: undefined
   };
+  showTelephone: boolean = false;
+  stars = [0, 1, 2, 3, 4];
 
   campingsIcons = [
     // { category: 'Fuel Station'                , src: 'assets/gas-pump.png'              ,'selected': true  },
@@ -176,13 +177,14 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
     { category: 'CAMPINGCARPORTUGAL'          , src: 'assets/campingcarportugal.png'    ,'selected': true },
     { category: 'AREASAC'                     , src: 'assets/areasac.ico'               ,'selected': true },
     { category: 'CAMPINGCARPARK'              , src: 'assets/campingcarpark.ico'        ,'selected': true },
-    { category: 'AEAE'                        , src: 'assets/AEAE.png'                  ,'selected': true },
+    { category: 'AEAE'                        , src: 'assets/MOTORHOME_AREA.png'        ,'selected': true },
     { category: 'CAMPERSTOP'                  , src: 'assets/CAMPERSTOP.png'            ,'selected': true },
     { category: 'CAMPERCONTACT'               , src: 'assets/CAMPERCONTACT.ico'         ,'selected': true },
     { category: 'REVOLUTION'                  , src: 'assets/REVOLUTION.ico'            ,'selected': true },
     { category: 'BLOOMESTLAUNDRY'             , src: 'assets/BLOOMESTLAUNDRY.webp'      ,'selected': true },
     { category: 'LAWASH'                      , src: 'assets/LAWASH.png'                ,'selected': true },
-    { category: 'openroute'                   , src: 'assets/map-marker.png'            ,'selected': true }
+    { category: 'openroute'                   , src: 'assets/map-marker.png'            ,'selected': true },
+    { category: 'PARKINGVERDE'                , src: 'assets/ParkingVerde.ico'          ,'selected': true },
   ];
 
   campingOverlay!: Overlay;
@@ -206,7 +208,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
     {
       title: 'Parking',
       icon: 'assets/PARKING_LOT_DAY_NIGHT.png',
-      selected: false,
+      selected: true,
       group: ['PARKING LOT DAY/NIGHT','DAILY PARKING LOT ONLY', 'REST AREA'],
       avaliable: ['PARKING LOT DAY/NIGHT','DAILY PARKING LOT ONLY', 'REST AREA'],
       extraFilter: this.campingServices
@@ -215,8 +217,8 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
       title: 'Camping',
       icon: 'assets/CAMPING.png',
       selected: false,
-      group: ['CAMPING','PRIVATE CAR PARK FOR CAMPERS', 'PAYING MOTORHOME AREA','HOMESTAYS ACCOMMODATION'],
-      avaliable: ['CAMPING','PRIVATE CAR PARK FOR CAMPERS', 'PAYING MOTORHOME AREA','HOMESTAYS ACCOMMODATION'],
+      group: ['CAMPING','PRIVATE CAR PARK FOR CAMPERS', 'PAYING MOTORHOME AREA','HOMESTAYS ACCOMMODATION','CAMPERCONTACT','PARKINGVERDE'],
+      avaliable: ['CAMPING','PRIVATE CAR PARK FOR CAMPERS', 'PAYING MOTORHOME AREA','HOMESTAYS ACCOMMODATION','CAMPERCONTACT','PARKINGVERDE'],
       extraFilter: this.campingServices
     },
     {
@@ -231,8 +233,8 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
       title: 'ASA',
       icon: 'assets/campingcarportugal.png',
       selected: false,
-      group: ['AREASAC','EUROSTOPS','CAMPINGCARPORTUGAL','CAMPINGCARPARK','AEAE','CAMPERSTOP','CAMPERCONTACT'],
-      avaliable: ['AREASAC','EUROSTOPS','CAMPINGCARPORTUGAL','CAMPINGCARPARK','AEAE','CAMPERSTOP','CAMPERCONTACT']
+      group: ['AREASAC','EUROSTOPS','CAMPINGCARPORTUGAL','CAMPINGCARPARK','AEAE','CAMPERSTOP'],
+      avaliable: ['AREASAC','EUROSTOPS','CAMPINGCARPORTUGAL','CAMPINGCARPARK','AEAE','CAMPERSTOP']
     },
     {
       title: 'Shopping',
@@ -256,6 +258,8 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
   showCurrentLocationInMap: boolean = true;
   watchPositionId: number = 0;
 
+  backendEndPoint: string = 'https://camplife.ddns.net:443/api/';
+
 
   @HostListener('document:keydown', ['$event'])
   handleKeydown(event: KeyboardEvent) {
@@ -277,8 +281,17 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
   }
   ngOnInit(): void {
     if (sessionStorage.getItem('cruising') == 'true') {
-      this.campingsIcons.push({ category: 'cruising', src: 'assets/dick.png','selected': false });
+      this.campingsIcons.push({ category: 'cruising', src: 'assets/dick.png','selected': true });
+      this.campingsMenu.push({
+        title: 'Cruising',
+        icon: 'assets/dick.png',
+        selected: false,
+        group: ['cruising'],
+        avaliable: ['cruising']
+      })
     }
+
+    //alert("THIS IS A POC - Proof Of Concept");
   }
 
   ngAfterViewInit(): void {
@@ -375,7 +388,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
       // cruising
       const cruising: any = this.campingsIcons.find(x => x.category == 'cruising');
       if (cruising && cruising.selected) {
-        const cruisingUrl = `http://cruzmv.ddns.net:3000/get_cruiser_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const cruisingUrl = `${this.backendEndPoint}get_cruiser_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
 
         const cruisingData: any  = await this.httpClient.get(cruisingUrl).toPromise();
         for (let i = 0; i < cruisingData.data.length; i++) {
@@ -401,7 +414,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
       // Intermache
       const intermarche: any = this.campingsIcons.find(x => x.category == 'INTERMACHE');
       if (intermarche && intermarche.selected) {
-        const intermarchegUrl = `http://cruzmv.ddns.net:3000/get_intermache_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const intermarchegUrl = `${this.backendEndPoint}get_intermache_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
         const intermarcheData: any  = await this.httpClient.get(intermarchegUrl).toPromise();
         for (let i = 0; i < intermarcheData.data.length; i++) {
           const place = intermarcheData.data[i];
@@ -427,7 +440,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
       // Eurostops
       const eurostops: any = this.campingsIcons.find(x => x.category == 'EUROSTOPS');
       if (eurostops && eurostops.selected) {
-        const eurostopsgUrl = `http://cruzmv.ddns.net:3000/get_eurostops_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const eurostopsgUrl = `${this.backendEndPoint}get_eurostops_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
         const eurostopsData: any  = await this.httpClient.get(eurostopsgUrl).toPromise();
         for (let i = 0; i < eurostopsData.data.length; i++) {
           const place = eurostopsData.data[i];
@@ -458,7 +471,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
       //campingcarportugal
       const campingcarportugal: any = this.campingsIcons.find(x => x.category == 'CAMPINGCARPORTUGAL');
       if (campingcarportugal && campingcarportugal.selected) {
-        const campingcarportugalUrl = `http://cruzmv.ddns.net:3000/get_campingcarportugal_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const campingcarportugalUrl = `${this.backendEndPoint}get_campingcarportugal_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
         const campingcarportugalData: any  = await this.httpClient.get(campingcarportugalUrl).toPromise();
         for (let i = 0; i < campingcarportugalData.data.length; i++) {
           const place = campingcarportugalData.data[i];
@@ -490,7 +503,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
       // areasac
       const areasac: any = this.campingsIcons.find(x => x.category == 'AREASAC');
       if (areasac && areasac.selected) {
-        const areasacUrl = `http://cruzmv.ddns.net:3000/get_areasac_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const areasacUrl = `${this.backendEndPoint}get_areasac_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
         const areasacData: any  = await this.httpClient.get(areasacUrl).toPromise();
         for (let i = 0; i < areasacData.data.length; i++) {
           const place = areasacData.data[i];
@@ -514,7 +527,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
       // campingcarpark
       const campingcarpark: any = this.campingsIcons.find(x => x.category == 'CAMPINGCARPARK');
       if (campingcarpark && campingcarpark.selected) {
-        const campingcarparkUrl = `http://cruzmv.ddns.net:3000/get_campingcarpark_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const campingcarparkUrl = `${this.backendEndPoint}get_campingcarpark_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
         const campingcarparkData: any  = await this.httpClient.get(campingcarparkUrl).toPromise();
         for (let i = 0; i < campingcarparkData.data.length; i++) {
           const place = campingcarparkData.data[i];
@@ -541,7 +554,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
       // AEAE
       const AEAE: any = this.campingsIcons.find(x => x.category == 'AEAE');
       if (AEAE && AEAE.selected) {
-        const AEAEUrl = `http://cruzmv.ddns.net:3000/get_AEAE_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const AEAEUrl = `${this.backendEndPoint}get_AEAE_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
         const AEAEData: any  = await this.httpClient.get(AEAEUrl).toPromise();
         for (let i = 0; i < AEAEData.data.length; i++) {
           const place = AEAEData.data[i];
@@ -565,7 +578,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
       // CAMPERSTOP
       const CAMPERSTOP: any = this.campingsIcons.find(x => x.category == 'CAMPERSTOP');
       if (CAMPERSTOP && CAMPERSTOP.selected) {
-        const CAMPERSTOPUrl = `http://cruzmv.ddns.net:3000/get_camperstop_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const CAMPERSTOPUrl = `${this.backendEndPoint}get_camperstop_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
         const CAMPERSTOPData: any  = await this.httpClient.get(CAMPERSTOPUrl).toPromise();
         for (let i = 0; i < CAMPERSTOPData.data.length; i++) {
           const place = CAMPERSTOPData.data[i];
@@ -603,7 +616,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
       // CAMPERCONTACT
       const CAMPERCONTACT: any = this.campingsIcons.find(x => x.category == 'CAMPERCONTACT');
       if (CAMPERCONTACT && CAMPERCONTACT.selected) {
-        const CAMPERCONTACTUrl = `http://cruzmv.ddns.net:3000/get_campercontact_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const CAMPERCONTACTUrl = `${this.backendEndPoint}get_campercontact_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
         const CAMPERCONTACTData: any  = await this.httpClient.get(CAMPERCONTACTUrl).toPromise();
         for (let i = 0; i < CAMPERCONTACTData.data.length; i++) {
           const place = CAMPERCONTACTData.data[i];
@@ -631,7 +644,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
       //REVOLUTION
       const REVOLUTION: any = this.campingsIcons.find(x => x.category == 'REVOLUTION');
       if (REVOLUTION && REVOLUTION.selected) {
-        const REVOLUTIONUrl = `http://cruzmv.ddns.net:3000/get_REVOLUTION_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const REVOLUTIONUrl = `${this.backendEndPoint}get_REVOLUTION_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
         const REVOLUTIONData: any  = await this.httpClient.get(REVOLUTIONUrl).toPromise();
         for (let i = 0; i < REVOLUTIONData.data.data.length	; i++) {
           const place = REVOLUTIONData.data.data[i];
@@ -655,7 +668,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
       //BLOOMESTLAUNDRY
       const BLOOMESTLAUNDRY: any = this.campingsIcons.find(x => x.category == 'BLOOMESTLAUNDRY');
       if (BLOOMESTLAUNDRY && BLOOMESTLAUNDRY.selected) {
-        const BLOOMESTLAUNDRYUrl = `http://cruzmv.ddns.net:3000/get_BLOOMESTLAUNDRY_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const BLOOMESTLAUNDRYUrl = `${this.backendEndPoint}get_BLOOMESTLAUNDRY_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
         const BLOOMESTLAUNDRYData: any  = await this.httpClient.get(BLOOMESTLAUNDRYUrl).toPromise();
         for (let i = 0; i < BLOOMESTLAUNDRYData.data.objects.length; i++) {
           const place = BLOOMESTLAUNDRYData.data.objects[i];
@@ -679,7 +692,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
       //LAWASH
       const LAWASH: any = this.campingsIcons.find(x => x.category == 'LAWASH');
       if (LAWASH && LAWASH.selected) {
-        const LAWASHUrl = `http://cruzmv.ddns.net:3000/get_LAWASH_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+        const LAWASHUrl = `${this.backendEndPoint}get_LAWASH_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
         const LAWASHData: any  = await this.httpClient.get(LAWASHUrl).toPromise();
         for (let i = 0; i < LAWASHData.data.length; i++) {
           const place = LAWASHData.data[i];
@@ -701,11 +714,10 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
         }
       }
 
-
       //openroute
       const openRoute: any = this.campingsIcons.find(x => x.category == 'openroute');
       if (openRoute && openRoute.selected && this.openrouteSearch.nativeElement.value.length > 0) {
-        const openrouteUrl = `http://cruzmv.ddns.net:3000/search_openroute?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}&q=${this.openrouteSearch.nativeElement.value}`;
+        const openrouteUrl = `${this.backendEndPoint}search_openroute?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}&q=${this.openrouteSearch.nativeElement.value}`;
         const openrouteData: any  = await this.httpClient.get(openrouteUrl).toPromise();
         for (let i = 0; i < openrouteData.data.features.length; i++) {
           const place = openrouteData.data.features[i];
@@ -915,7 +927,9 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
       }
       this.photoInfoImg.nativeElement.src = this.selectedPlace.photos[this.photoIndex].link_thumb;
     } else { 
-      this.photoInfoImg.nativeElement.src = "";
+      if (this.photoInfoImg){
+        this.photoInfoImg.nativeElement.src = "";
+      }
     }
   }
 
@@ -934,6 +948,59 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
     }
     (this.campingsIcons.find(x => x.category == option) as any).selected = event;
   }
+
+  copyLatLnt(latitude: string,longitude: string) {
+    navigator.clipboard.writeText(`${latitude},${longitude}`).then(() => {
+      console.log(`copied: ${latitude},${longitude}`);
+    }).catch(err =>{
+      console.log(`Error: ${latitude},${longitude}`);
+    })
+  }
+
+  WebSite(url: string) {
+    let icon: any = "assets/www.png";
+    let title: any = "Visit the Website"
+    if (url.includes("campercontact.com")) {
+      icon = "assets/CAMPERCONTACT.ico";
+      title = "Check on Campercontact"
+    } else if (url.includes("areasac.es")) {
+      icon = "assets/areasac.ico";
+      title = "Check on Areas AC";
+    } else if (url.includes("eurostops.pt")) {
+      icon = "assets/eurostops.png";
+      title = "Check on Eurostops";
+    } else if (url.includes("camperstop.com")) {
+      icon = "assets/CAMPERSTOP.png";
+      title = "Check on Camperstops";
+    } else if (url.includes("parkingverde.com")) {
+      icon = "assets/ParkingVerde.ico";
+      title = "Check on Parking Verde";
+    } else if(url.includes("google.com")) {
+      icon = undefined;
+      title = undefined;
+    }
+    const result = {
+      img: icon,
+      title: title
+    }
+    return result;
+  }
+
+  getStarIcon(index: number, score: number): string {
+    const fullStarThreshold = index + 1;
+    if (score >= fullStarThreshold) {
+      return 'star'; // Full star
+    } else if (score >= fullStarThreshold - 0.5) {
+      return 'star-outline'; // Half star
+    } else {
+      return 'star-outline'; // Empty star
+    }
+  }  
+
+  isHalfStar(index: number, score: number): boolean {
+    const fullStarThreshold = index + 1;
+    return score >= fullStarThreshold - 0.5 && score < fullStarThreshold;
+  }  
 
   /**
    * Inicialize the openlayer map
@@ -956,13 +1023,9 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
     // On map click
     this.map.on('click', (event: any) => {
       const features = this.map.getFeaturesAtPixel(event.pixel);
-      if (features && features.length > 0) {
-        
-        
-        
+      if (features && features.length > 0) {        
         // if clicked on a feature
         if (features[0].values_.id) {
-
           /*
           const regex = /^poi_\d+$/;
           if (regex.test(features[0].values_.id)) {
@@ -994,7 +1057,8 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
                           place.category.name == 'LAWASH' ||
                           place.category.name == 'openroute' ||
                           place.category.name == 'CAMPERSTOP' ||
-                          place.category.name == 'CAMPERCONTACT')) {
+                          place.category.name == 'CAMPERCONTACT' ||
+                          place.category.name == 'PARKINGVERDE' )) {
               url = place.site_internet;
             } else if (place.category.name == 'CAMPINGCARPORTUGAL') {
               //url = "https://www.campingcarportugal.com/areasac/LstAreasnv.php?language=PT&mode=2&distrito=0&concelho=0&nomearea=&tiparea=0&pernoita=-1&elect=-1&intern=-1";
@@ -1010,11 +1074,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
             // });
           }
 
-
-
         }
-
-
       } else {
         this.showPoiInfo = false;
         this.cdRef.detectChanges();
@@ -1082,6 +1142,8 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
       }
       this.map.getTargetElement().style.cursor = hasFeature ? 'pointer' : '';
     });
+
+    //this.campingMenuClick(null);
   }
 
   /**
@@ -1175,7 +1237,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
           }
 
           // Log's the postion
-          this.httpClient.post(`http://cruzmv.ddns.net:3000/log_geo`, logData).subscribe(() => {
+          this.httpClient.post(`${this.backendEndPoint}log_geo`, logData).subscribe(() => {
             // Do nothing
           },error => {
             console.log(JSON.stringify(error));
@@ -1775,7 +1837,9 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
 
 
   private async updatePois() {
-    let centerCoordinates: any;
+    this.waitingPage = true;
+    this.cdRef.detectChanges();
+    let centerCoordinates = this.openLayers.coords_4326(this.map.getView().getCenter())
     for(const menu of this.campingsMenu){
       if (menu.selected) {
         switch (menu.title) {
@@ -1784,19 +1848,73 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
             break;
           case 'Camping':
             this.campings.push(... await this.filterPark4Night(menu.group));
+
+            // CAMPERCONTACT
+            if( (this.campingsMenu.find(x => x.title == 'Camping') as any).group.includes('CAMPERCONTACT')) { 
+              (this.campingsIcons.find(x => x.category == 'CAMPERCONTACT') as any).selected = true
+              const CAMPERCONTACTUrl = `${this.backendEndPoint}get_campercontact_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              const CAMPERCONTACTData: any  = await this.httpClient.get(CAMPERCONTACTUrl).toPromise();
+              for (let i = 0; i < CAMPERCONTACTData.data.length; i++) {
+                const place = CAMPERCONTACTData.data[i];
+
+                this.campings.push({
+                  id: `${place.id}`,
+                  name: `${place.title}`,
+                  note_moyenne: place.data._source.filters.rating,
+                  description_en: `${place.name} ${place.data._source.subtitle}`,
+                  category: {
+                    name: 'CAMPERCONTACT'
+                  },
+                  location: {
+                    latitude: place.latitude,
+                    longitude: place.longitude
+                  },
+                  site_internet: `https://www.campercontact.com/en${place.data._source.permalink}`,
+                  photos: [{link_thumb: place.data._source.thumbnail}],
+                  data: place.data
+                })
+              }
+            }
+
+            // PARKINGVERDE
+            if( (this.campingsMenu.find(x => x.title == 'Camping') as any).group.includes('PARKINGVERDE')) { 
+              (this.campingsIcons.find(x => x.category == 'PARKINGVERDE') as any).selected = true
+              const PARKINGVERDEUrl = `${this.backendEndPoint}get_parkingverde?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              const PARKINGVERDEData: any  = await this.httpClient.get(PARKINGVERDEUrl).toPromise();
+              for (let i = 0; i < PARKINGVERDEData.data.length; i++) {
+                const place = PARKINGVERDEData.data[i];
+
+                this.campings.push({
+                  id: `${place.id}`,
+                  name: `${place.nombre}`,
+                  description_en: `${place.nombre} - plazas_libres: ${place.plazas_libres} - plazas_totales ${place.plazas_totales} - direccion: ${place.direccion}`,
+                  category: {
+                    name: 'PARKINGVERDE'
+                  },
+                  location: {
+                    latitude: place.lat,
+                    longitude: place.long
+                  },
+                  site_internet: `https://es.secure.parkingverde.com/parking.php?id=${place.id}`,
+                  data: place.data
+                })
+              }
+            }
+
             break;
           case 'Nature':
             this.campings.push(... await this.filterPark4Night(menu.group));
             break;
           case 'ASA':
             //this.setCampings(menu.group,true);
-            centerCoordinates = this.openLayers.coords_4326(this.map.getView().getCenter())
+            //centerCoordinates = this.openLayers.coords_4326(this.map.getView().getCenter())
 
             // areasac
             //const areasac: any = this.campingsIcons.find(x => x.category == 'AREASAC');
             //if (areasac && areasac.selected) {
             if( (this.campingsMenu.find(x => x.title == 'ASA') as any).group.includes('AREASAC')) { 
-              const areasacUrl = `http://cruzmv.ddns.net:3000/get_areasac_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              (this.campingsIcons.find(x => x.category == 'AREASAC') as any).selected = true
+              const areasacUrl = `${this.backendEndPoint}get_areasac_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
               const areasacData: any  = await this.httpClient.get(areasacUrl).toPromise();
               for (let i = 0; i < areasacData.data.length; i++) {
                 const place = areasacData.data[i];
@@ -1821,7 +1939,8 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
             //const eurostops: any = this.campingsIcons.find(x => x.category == 'EUROSTOPS');
             //if (eurostops && eurostops.selected) {
             if( (this.campingsMenu.find(x => x.title == 'ASA') as any).group.includes('EUROSTOPS')) { 
-              const eurostopsgUrl = `http://cruzmv.ddns.net:3000/get_eurostops_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              (this.campingsIcons.find(x => x.category == 'EUROSTOPS') as any).selected = true
+              const eurostopsgUrl = `${this.backendEndPoint}get_eurostops_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
               const eurostopsData: any  = await this.httpClient.get(eurostopsgUrl).toPromise();
               for (let i = 0; i < eurostopsData.data.length; i++) {
                 const place = eurostopsData.data[i];
@@ -1853,7 +1972,8 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
             //const campingcarportugal: any = this.campingsIcons.find(x => x.category == 'CAMPINGCARPORTUGAL');
             //if (campingcarportugal && campingcarportugal.selected) {
             if( (this.campingsMenu.find(x => x.title == 'ASA') as any).group.includes('CAMPINGCARPORTUGAL')) { 
-              const campingcarportugalUrl = `http://cruzmv.ddns.net:3000/get_campingcarportugal_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              (this.campingsIcons.find(x => x.category == 'CAMPINGCARPORTUGAL') as any).selected = true
+              const campingcarportugalUrl = `${this.backendEndPoint}get_campingcarportugal_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
               const campingcarportugalData: any  = await this.httpClient.get(campingcarportugalUrl).toPromise();
               for (let i = 0; i < campingcarportugalData.data.length; i++) {
                 const place = campingcarportugalData.data[i];
@@ -1886,7 +2006,8 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
             //const campingcarpark: any = this.campingsIcons.find(x => x.category == 'CAMPINGCARPARK');
             //if (campingcarpark && campingcarpark.selected) {
             if( (this.campingsMenu.find(x => x.title == 'ASA') as any).group.includes('CAMPINGCARPARK')) { 
-              const campingcarparkUrl = `http://cruzmv.ddns.net:3000/get_campingcarpark_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              (this.campingsIcons.find(x => x.category == 'CAMPINGCARPARK') as any).selected = true
+              const campingcarparkUrl = `${this.backendEndPoint}get_campingcarpark_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
               const campingcarparkData: any  = await this.httpClient.get(campingcarparkUrl).toPromise();
               for (let i = 0; i < campingcarparkData.data.length; i++) {
                 const place = campingcarparkData.data[i];
@@ -1914,7 +2035,8 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
             //const AEAE: any = this.campingsIcons.find(x => x.category == 'AEAE');
             //if (AEAE && AEAE.selected) {
             if( (this.campingsMenu.find(x => x.title == 'ASA') as any).group.includes('AEAE')) { 
-              const AEAEUrl = `http://cruzmv.ddns.net:3000/get_AEAE_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              (this.campingsIcons.find(x => x.category == 'AEAE') as any).selected = true
+              const AEAEUrl = `${this.backendEndPoint}get_AEAE_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
               const AEAEData: any  = await this.httpClient.get(AEAEUrl).toPromise();
               for (let i = 0; i < AEAEData.data.length; i++) {
                 const place = AEAEData.data[i];
@@ -1939,7 +2061,8 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
             //const CAMPERSTOP: any = this.campingsIcons.find(x => x.category == 'CAMPERSTOP');
             //if (CAMPERSTOP && CAMPERSTOP.selected) {
             if( (this.campingsMenu.find(x => x.title == 'ASA') as any).group.includes('CAMPERSTOP')) { 
-              const CAMPERSTOPUrl = `http://cruzmv.ddns.net:3000/get_camperstop_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              (this.campingsIcons.find(x => x.category == 'CAMPERSTOP') as any).selected = true
+              const CAMPERSTOPUrl = `${this.backendEndPoint}get_camperstop_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
               const CAMPERSTOPData: any  = await this.httpClient.get(CAMPERSTOPUrl).toPromise();
               for (let i = 0; i < CAMPERSTOPData.data.length; i++) {
                 const place = CAMPERSTOPData.data[i];
@@ -1974,44 +2097,15 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
               }
             }
 
-            // CAMPERCONTACT
-            //const CAMPERCONTACT: any = this.campingsIcons.find(x => x.category == 'CAMPERCONTACT');
-            //if (CAMPERCONTACT && CAMPERCONTACT.selected) {
-            if( (this.campingsMenu.find(x => x.title == 'ASA') as any).group.includes('CAMPERSTOP')) { 
-              const CAMPERCONTACTUrl = `http://cruzmv.ddns.net:3000/get_campercontact_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
-              const CAMPERCONTACTData: any  = await this.httpClient.get(CAMPERCONTACTUrl).toPromise();
-              for (let i = 0; i < CAMPERCONTACTData.data.length; i++) {
-                const place = CAMPERCONTACTData.data[i];
-
-                this.campings.push({
-                  id: `${place.id}`,
-                  name: `${place.title}`,
-                  note_moyenne: place.data._source.filters.rating,
-                  description_en: `${place.name} ${place.data._source.subtitle}`,
-                  category: {
-                    name: 'CAMPERCONTACT'
-                  },
-                  location: {
-                    latitude: place.latitude,
-                    longitude: place.longitude
-                  },
-                  site_internet: `https://www.campercontact.com/en${place.data._source.permalink}`,
-                  photos: [{link_thumb: place.data._source.thumbnail}],
-                  data: place.data
-                })
-              }
-            }
-
             break;
           case 'Shopping':
             //this.setCampings(menu.group,true);
-            centerCoordinates = this.openLayers.coords_4326(this.map.getView().getCenter())
-
+            
             // Intermache
             //const intermarche: any = this.campingsIcons.find(x => x.category == 'INTERMACHE');
             //if (intermarche && intermarche.selected) {
             if( (this.campingsMenu.find(x => x.title == 'Shopping') as any).group.includes('INTERMACHE')) { 
-              const intermarchegUrl = `http://cruzmv.ddns.net:3000/get_intermache_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              const intermarchegUrl = `${this.backendEndPoint}get_intermache_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
               const intermarcheData: any  = await this.httpClient.get(intermarchegUrl).toPromise();
               for (let i = 0; i < intermarcheData.data.length; i++) {
                 const place = intermarcheData.data[i];
@@ -2036,13 +2130,13 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
             break;
           case 'Laundry':
             //this.setCampings(menu.group,true);
-            centerCoordinates = this.openLayers.coords_4326(this.map.getView().getCenter())
+            //centerCoordinates = this.openLayers.coords_4326(this.map.getView().getCenter())
 
             //REVOLUTION
             //const REVOLUTION: any = this.campingsIcons.find(x => x.category == 'REVOLUTION');
             //if (REVOLUTION && REVOLUTION.selected) {
             if( (this.campingsMenu.find(x => x.title == 'Laundry') as any).group.includes('REVOLUTION')) { 
-              const REVOLUTIONUrl = `http://cruzmv.ddns.net:3000/get_REVOLUTION_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              const REVOLUTIONUrl = `${this.backendEndPoint}get_REVOLUTION_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
               const REVOLUTIONData: any  = await this.httpClient.get(REVOLUTIONUrl).toPromise();
               for (let i = 0; i < REVOLUTIONData.data.data.length	; i++) {
                 const place = REVOLUTIONData.data.data[i];
@@ -2067,7 +2161,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
             //const BLOOMESTLAUNDRY: any = this.campingsIcons.find(x => x.category == 'BLOOMESTLAUNDRY');
             //if (BLOOMESTLAUNDRY && BLOOMESTLAUNDRY.selected) {
             if( (this.campingsMenu.find(x => x.title == 'Laundry') as any).group.includes('BLOOMESTLAUNDRY')) { 
-              const BLOOMESTLAUNDRYUrl = `http://cruzmv.ddns.net:3000/get_BLOOMESTLAUNDRY_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              const BLOOMESTLAUNDRYUrl = `${this.backendEndPoint}get_BLOOMESTLAUNDRY_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
               const BLOOMESTLAUNDRYData: any  = await this.httpClient.get(BLOOMESTLAUNDRYUrl).toPromise();
               for (let i = 0; i < BLOOMESTLAUNDRYData.data.objects.length; i++) {
                 const place = BLOOMESTLAUNDRYData.data.objects[i];
@@ -2092,7 +2186,7 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
             //const LAWASH: any = this.campingsIcons.find(x => x.category == 'LAWASH');
             //if (LAWASH && LAWASH.selected) {
             if( (this.campingsMenu.find(x => x.title == 'Laundry') as any).group.includes('LAWASH')) { 
-              const LAWASHUrl = `http://cruzmv.ddns.net:3000/get_LAWASH_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
+              const LAWASHUrl = `${this.backendEndPoint}get_LAWASH_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`;
               const LAWASHData: any  = await this.httpClient.get(LAWASHUrl).toPromise();
               for (let i = 0; i < LAWASHData.data.length; i++) {
                 const place = LAWASHData.data[i];
@@ -2118,11 +2212,68 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
             this.campings.push(...await this.filterPark4Night(menu.group));
 
             break;
+          case 'Cruising':
+            // cruising
+            //const cruising: any = this.campingsIcons.find(x => x.category == 'cruising');
+            //if (cruising && cruising.selected) {
+            if( (this.campingsMenu.find(x => x.title == 'Cruising') as any).group.includes('cruising')) { 
+              (this.campingsIcons.find(x => x.category == 'cruising') as any).selected = true
+              const cruisingUrl = `${this.backendEndPoint}get_cruiser_list?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}`
+              const cruisingData: any  = await this.httpClient.get(cruisingUrl).toPromise();
+              for (let i = 0; i < cruisingData.data.length; i++) {
+                const place = cruisingData.data[i];
+                this.campings.push({
+                  id: `${place.title_place} \n\n ${place.place_place} \n\n ${place.description_place}`,
+                  name: `${place.title_place} - ${place.place_place}`,
+                  note_moyenne: place.title_place,
+                  nb_commentaires: place.place_place,
+                  description_en: place.description_place,
+                  site_internet: place.more_place,
+                  category: {
+                    name: 'cruising'
+                  },
+                  location: {
+                    latitude: place.latitude,
+                    longitude: place.longitude
+                  }
+                })
+              }
+            }
+            break;
           default:
             break;
         }
       } else {
         this.setCampings(menu.group);
+      }
+    }
+
+    // Open Route Search
+    if (this.mapSearchInput.nativeElement.value.length > 0) {
+      const openrouteUrl = `${this.backendEndPoint}search_openroute?lat=${centerCoordinates[1]}&long=${centerCoordinates[0]}&q=${this.mapSearchInput.nativeElement.value}`;
+      const openrouteData: any  = await this.httpClient.get(openrouteUrl).toPromise();
+      for (let i = 0; i < openrouteData.data.features.length; i++) {
+        const place = openrouteData.data.features[i];
+        let site = undefined;
+        try{
+          site = place.properties.addendum ? place.properties.addendum.osm.website : undefined;
+        } catch (e) {
+          console.error('Error on openroute', e);
+        }
+
+        this.campings.push({
+          id: `${place.properties.id}`,
+          name: `${place.properties.label}`,
+          description_en: `${place.properties.street ? place.properties.street : ""} - ${place.properties.locality ? place.properties.locality : ""} - ${place.properties.region ? place.properties.region : ""} - ${place.properties.country ? place.properties.country : ""} - ${JSON.stringify(place.properties.addendum)}`,
+          category: {
+            name: 'openroute'
+          },
+          location: {
+            latitude: place.geometry.coordinates[1],
+            longitude: place.geometry.coordinates[0]
+          },
+          site_internet: site ? site : `https://www.google.com/maps?q=${place.geometry.coordinates[1]},${place.geometry.coordinates[0]}`
+        })
       }
     }
 
@@ -2133,6 +2284,8 @@ export class MapsComponent implements AfterViewInit, OnInit {  //OnInit
 
     // Draw the pois
     this.drawCampings();
+    this.waitingPage = false;
+    this.cdRef.detectChanges();
   }
 
   private async setCampings(categoriesToSelect: any, value: boolean = false) {

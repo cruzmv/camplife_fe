@@ -84,7 +84,7 @@
     position: absolute;
     font-size: 50px;
     top: 10px;
-    right: 10px;
+    left: 10px;
     z-index: 9999;
     color: white;
 }
@@ -430,6 +430,7 @@
     height: 78%;
     top: 169px;
     right: 0px;
+    overflow-y: auto;
 }
 
 .photosInfo {
@@ -443,12 +444,28 @@
 
 .photoNavigateIcon {
     cursor: pointer;
+    width: 60px;
+    height: 60px;
 }
 
 .placeDescription {
     font-family: monospace;
     font-weight: 600;
     margin: 15px 15px 0 15px;
+}
+
+.photoInfoImg {
+    width: 300px;
+    height: 300px;
+    object-fit: cover;  /* Ensures the image covers the entire area, cropping if necessary */
+    /* Alternatively, you can use:
+       object-fit: contain;  // To keep the image aspect ratio intact and fit within the box
+    */
+}
+
+.support-icon {
+    width: 40px;
+    height: 40px;
 }
 
 .placeScore {
@@ -470,10 +487,6 @@
 
 .placeActionIcons {
     cursor: pointer;
-    width: 64px;
-    border-style: solid;
-    border-color: black;
-    border-radius: 50px;
 }
 
 .settings-window {
@@ -535,5 +548,127 @@
     align-content: space-between;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin: 0 15px 15px 20px;
+}
+
+.waiting-page {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(150, 148, 148, 0.5);
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;    
+}
+
+.google-ad {
+    width: 100%;
+    height: 300px;
+    background-color: aqua;
+    margin-top: 16px;
+}
+
+.google-ad-top-horizont {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    width: 728px;
+    height: 90px;
+    background-color: aqua;
+}
+
+.telephone-info{
+    position: absolute;
+    width: 50%;
+    height: 150px;
+    top: 25%;
+    left: 25%;
+    background-color: #4a5568;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-content: space-between;
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+
+.telephone-info-header {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    align-content: center;
+    flex-wrap: nowrap;
+    padding-right: 10px;
+}
+
+.close-telephone {
+    cursor: pointer;
+}
+
+.telephone-info-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-content: space-around;
+    justify-content: space-around;
+    align-items: center;
+    font-size: xx-large;
+    font-weight: 900;
+}
+
+
+.star-rating {
+    display: flex;
+    align-items: center;
+}
+
+.star {
+    color: blue;
+    font-size: 24px;
+    margin-right: 4px;
+    position: relative;
+}
+
+.star.half-star::before {
+    content: '\2605'; /* Unicode for a filled star */
+    position: absolute;
+    left: 0;
+    width: 50%; /* This clips the left half of the star */
+    overflow: hidden;
+    color: blue;
+}
+
+.rating-info {
+    font-size: 14px;
+    color: #666;
+    margin-left: 8px;
+}
+
+.refresh-buttom {
+    position: absolute;
+    top: 0px;
+    width: 10%;
+    left: 45%;
+    display: flex;
+}
+
+.refesh-button-button {
+    width: 200px;
+    height: 50px;
+    font-size: larger;
+    font-weight: 600;
+    opacity: 0.5;
+    border-radius: 10px;
+}
+
+.price-label {
+    font-size: medium;
+    font-weight: bolder;
 }
